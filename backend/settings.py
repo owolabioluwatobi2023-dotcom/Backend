@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure-2q3*+9$im5lx)lh$$d60#!cdk1-7x2mb_utm0z5kkyh^e)_q3#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["your-app.onrender.com", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["https://backend-1-dj3c.onrender.com", "backend-1-dj3c.onrender.com"]
 
 
 
@@ -65,6 +65,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
+
 ]
 
 STATIC_URL = "/static/"
@@ -96,11 +97,6 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 
-# DATABASES = {
-#     "default": dj_database_url.config(
-#         default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}"
-#     )
-# }
 
 DATABASES = {
     "default": dj_database_url.parse(config('DATABASE_URL'))
@@ -140,6 +136,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 
 
 
@@ -194,9 +192,3 @@ DEFAULT_FROM_EMAIL = "Mass Data <owolabioluwatobi2023@gmail.com>"
 # ]
 
 
-# DEBUG = True
-
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-]
