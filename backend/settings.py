@@ -98,25 +98,15 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 #     }
 # }
 
-
 import os
 import dj_database_url
 
-if os.getenv("DATABASE_URL"):
-    DATABASES = {
-        "default": dj_database_url.parse(os.environ["DATABASE_URL"])
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": "E-commerce",
-            "USER": "postgres",
-            "PASSWORD": "Akinola",
-            "HOST": "localhost",
-            "PORT": "5432",
-        }
-    }
+DATABASES = {
+    "default": dj_database_url.config(
+        default=os.getenv("DATABASE_URL", "sqlite:///db.sqlite3"),
+        conn_max_age=600
+    )
+}
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -191,13 +181,13 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 EMAIL_HOST_USER = "owolabioluwatobi2023@gmail.com"
-EMAIL_HOST_PASSWORD = "emnb clky oqwo bjhn"   # Replace with your App Password
+EMAIL_HOST_PASSWORD = "oqxc wfhh jlde xlpy"   # Replace with your App Password
 
 DEFAULT_FROM_EMAIL = "Mass Data <owolabioluwatobi2023@gmail.com>"
 
 
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -205,3 +195,10 @@ ALLOWED_HOSTS = [
     ".onrender.com",
 ]
 
+
+# DEBUG = True
+
+# ALLOWED_HOSTS = [
+#     "127.0.0.1",
+#     "localhost",
+# ]
