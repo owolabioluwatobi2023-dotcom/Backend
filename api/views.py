@@ -1917,47 +1917,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.conf import settings
 
-@api_view(['POST'])
-def register_user(request):
-    username = request.data.get('username')
-    email = request.data.get('email')
-    first_name = request.data.get('first_name')
-    last_name = request.data.get('last_name')
-    password = request.data.get('password')
-
-    if not username or not password:
-        return Response({"error": "Username and password required"}, status=400)
-
-    if User.objects.filter(username=username).exists():
-        return Response({"error": "Username exists"}, status=400)
-
-    if email and User.objects.filter(email=email).exists():
-        return Response({"error": "Email exists"}, status=400)
-
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name
-    )
-
-    # 🔥 GENERATE TOKEN (THIS FIXES YOUR 401 ISSUE)
-    refresh = RefreshToken.for_user(user)
-
-    return Response({
-        "message": "User created",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-        },
-        "token": str(refresh.access_token)   # ✅ IMPORTANT
-    }, status=201)
-
-
-
 # @api_view(['POST'])
 # def register_user(request):
 #     username = request.data.get('username')
@@ -1975,7 +1934,6 @@ def register_user(request):
 #     if email and User.objects.filter(email=email).exists():
 #         return Response({"error": "Email exists"}, status=400)
 
-#     # Create user
 #     user = User.objects.create_user(
 #         username=username,
 #         email=email,
@@ -1984,88 +1942,99 @@ def register_user(request):
 #         last_name=last_name
 #     )
 
-#     # Send welcome email
-#     if user.email:
-#         try:
-#             send_mail(
-#                 subject="🎉 Welcome to Mass Data",
-#                 message=f"""
-# Hello {user.first_name or user.username},
-
-# Welcome to Mass Data!
-
-# Your account has been created successfully.
-
-# Thank you for choosing Mass Data.
-
-# Regards,
-# Mass Data Team
-# """,
-
-
-#                 from_email=settings.DEFAULT_FROM_EMAIL,
-#                 recipient_list=[user.email],
-#                 fail_silently=False,
-#             )
-#         except Exception as e:
-#             print("Email Error:", e)
-
-#     # Generate JWT token
+#     # 🔥 GENERATE TOKEN (THIS FIXES YOUR 401 ISSUE)
 #     refresh = RefreshToken.for_user(user)
 
 #     return Response({
-#         "message": "User created successfully",
+#         "message": "User created",
 #         "user": {
 #             "id": user.id,
 #             "username": user.username,
 #             "first_name": user.first_name,
 #             "last_name": user.last_name,
-#             "email": user.email,
 #         },
-#         "token": str(refresh.access_token)
+#         "token": str(refresh.access_token)   # ✅ IMPORTANT
 #     }, status=201)
 
 
 
-
-
-
-
-
-
-# LOGIN (JWT)
-
 @api_view(['POST'])
-def login_user(request):
-    username = request.data.get("username")
-    password = request.data.get("password")
+def register_user(request):
+    username = request.data.get('username')
+    email = request.data.get('email')
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
+    password = request.data.get('password')
 
-    user = authenticate(username=username, password=password)
+    if not username or not password:
+        return Response({"error": "Username and password required"}, status=400)
 
-    if user is None:
-        return Response({"error": "Invalid credentials"}, status=400)
+    if User.objects.filter(username=username).exists():
+        return Response({"error": "Username exists"}, status=400)
 
-    token = RefreshToken.for_user(user)
+    if email and User.objects.filter(email=email).exists():
+        return Response({"error": "Email exists"}, status=400)
+
+    # Create user
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name
+    )
+
+    # Send welcome email
+    if user.email:
+        try:
+            send_mail(
+                subject="🎉 Welcome to Mass Data",
+                message=f"""
+Hello {user.first_name or user.username},
+
+Welcome to Mass Data!
+
+Your account has been created successfully.
+
+Thank you for choosing Mass Data.
+
+Regards,
+Mass Data Team
+""",
+
+
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print("Email Error:", e)
+
+    # Generate JWT token
+    refresh = RefreshToken.for_user(user)
 
     return Response({
-        "access": str(token.access_token),
-        "refresh": str(token),
+        "message": "User created successfully",
         "user": {
             "id": user.id,
             "username": user.username,
             "first_name": user.first_name,
             "last_name": user.last_name,
-        }
-    })
-
-# from django.core.mail import send_mail
-# from django.conf import settings
-# from django.contrib.auth import authenticate
-# from rest_framework.decorators import api_view
-# from rest_framework.response import Response
-# from rest_framework_simplejwt.tokens import RefreshToken
+            "email": user.email,
+        },
+        "token": str(refresh.access_token)
+    }, status=201)
 
 
+
+
+
+
+
+
+# =========================
+# LOGIN (JWT)
+# =========================
 # @api_view(['POST'])
 # def login_user(request):
 #     username = request.data.get("username")
@@ -2076,30 +2045,6 @@ def login_user(request):
 #     if user is None:
 #         return Response({"error": "Invalid credentials"}, status=400)
 
-#     # Send security alert email
-#     if user.email:
-#         try:
-#             send_mail(
-#                 subject="Security Alert - New Login",
-#                 message=f"""
-# Hello {user.first_name or user.username},
-
-# We detected a login to your Mass Data account.
-
-# If this was you, you can ignore this email.
-
-# If this was NOT you, please change your password immediately.
-
-# Mass Data Security Team
-# """,
-#                 from_email=settings.DEFAULT_FROM_EMAIL,
-#                 recipient_list=[user.email],
-#                 fail_silently=False,
-#             )
-#         except Exception as e:
-#             print("Email Error:", e)
-
-#     # Generate JWT token
 #     token = RefreshToken.for_user(user)
 
 #     return Response({
@@ -2112,6 +2057,61 @@ def login_user(request):
 #             "last_name": user.last_name,
 #         }
 #     })
+
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth import authenticate
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+@api_view(['POST'])
+def login_user(request):
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    user = authenticate(username=username, password=password)
+
+    if user is None:
+        return Response({"error": "Invalid credentials"}, status=400)
+
+    # Send security alert email
+    if user.email:
+        try:
+            send_mail(
+                subject="Security Alert - New Login",
+                message=f"""
+Hello {user.first_name or user.username},
+
+We detected a login to your Mass Data account.
+
+If this was you, you can ignore this email.
+
+If this was NOT you, please change your password immediately.
+
+Mass Data Security Team
+""",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print("Email Error:", e)
+
+    # Generate JWT token
+    token = RefreshToken.for_user(user)
+
+    return Response({
+        "access": str(token.access_token),
+        "refresh": str(token),
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+        }
+    })
 # =========================
 # PROFILE
 # =========================

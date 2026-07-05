@@ -352,14 +352,20 @@ def verify_payment(request):
 
     print("NEW BALANCE:", wallet.amount)
 
+    # Transaction.objects.create(
+    #     user=user,
+    #     reference=reference,
+    #     amount=amount,
+    #     status="success",
+    #     email=payment["customer"]["email"]
+    # )
     Transaction.objects.create(
-        user=user,
-        reference=reference,
-        amount=amount,
-        status="success",
-        email=payment["customer"]["email"]
-    )
-
+    user=user,
+    request_id=reference,
+    amount=amount,
+    status="success",
+    email=payment["customer"]["email"]
+)
     return Response({
         "status": "success",
         "amount": str(amount),
@@ -904,6 +910,210 @@ def vtpass_get(url, params=None):
 # WALLET BUY SYSTEM
 # =========================
 
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def buy_product(request):
+
+#     user = request.user
+#     product = str(request.data.get("product", "")).lower().strip()
+
+#     try:
+#         amount = Decimal(str(request.data.get("amount")))
+#     except:
+#         return Response({"error": "Invalid amount"}, status=400)
+
+#     if amount <= 0:
+#         return Response({"error": "Amount must be > 0"}, status=400)
+
+#     with transaction.atomic():
+
+#         wallet, _ = Wallet.objects.select_for_update().get_or_create(
+#             owner=user,
+#             defaults={"amount": Decimal("0.00")}
+#         )
+
+#         if wallet.amount < amount:
+#             return Response({"error": "Insufficient balance"}, status=400)
+
+#         payload = None
+
+#         # =========================
+#         # AIRTIME
+#         # =========================
+#         if product == "airtime":
+#             payload = {
+#                 "request_id": generate_request_id(),
+#                 "serviceID": request.data.get("network"),
+#                 "amount": str(amount),
+#                 "phone": request.data.get("phone")
+#             }
+
+#         # =========================
+#         # DATA
+#         # =========================
+#         elif product == "data":
+#             payload = {
+#                 "request_id": generate_request_id(),
+#                 "serviceID": request.data.get("network"),
+#                 "billersCode": request.data.get("phone"),
+#                 "variation_code": request.data.get("variation_code"),
+#                 "amount": str(amount),
+#                 "phone": request.data.get("phone")
+#             }
+
+#         # =========================
+#         # CABLE TV
+#         # =========================
+#         elif product == "cabletv":
+#             payload = {
+#                 "request_id": generate_request_id(),
+#                 "serviceID": request.data.get("serviceID"),
+#                 "billersCode": request.data.get("smartcard_number"),
+#                 "variation_code": request.data.get("variation_code"),
+#                 "amount": str(amount),
+#                 "phone": request.data.get("phone")
+#             }
+
+#         else:
+#             return Response({"error": "Invalid product"}, status=400)
+
+#         # =========================
+#         # CALL VTU ONCE
+#         # =========================
+#         data, status = vtpass_post(
+#             "https://sandbox.vtpass.com/api/pay",
+#             payload
+#         )
+
+#         if status != 200:
+#             return Response(data, status=status)
+
+#         wallet.amount -= amount
+#         wallet.save(update_fields=["amount"])
+
+#         return Response({
+#             "success": True,
+#             "product": product,
+#             "amount": str(amount),
+#             "new_balance": str(wallet.amount),
+#             "api_response": data
+#         })
+
+
+# # =========================
+# # AIRTIME (STANDALONE)
+# # =========================
+
+# @api_view(['POST'])
+# def buy_airtime(request):
+
+#     service_map = {
+#         "mtn": "mtn",
+#         "airtel": "airtel",
+#         "glo": "glo",
+#         "9mobile": "9mobile"
+#     }
+
+#     network = request.data.get("network")
+#     amount = request.data.get("amount")
+#     phone = request.data.get("phone")
+
+#     if not all([network, amount, phone]):
+#         return Response({"error": "missing fields"}, status=400)
+
+#     payload = {
+#         "request_id": generate_request_id(),
+#         "serviceID": service_map.get(network.lower()),
+#         "amount": amount,
+#         "phone": phone
+#     }
+
+#     data, status = vtpass_post(
+#         "https://sandbox.vtpass.com/api/pay",
+#         payload
+#     )
+
+#     return Response(data, status=status)
+
+
+# # =========================
+# # DATA (STANDALONE)
+# # =========================
+
+# @api_view(['POST'])
+# def buy_data(request):
+
+#     network_map = {
+#         "mtn": "mtn-data",
+#         "airtel": "airtel-data",
+#         "glo": "glo-data",
+#         "9mobile": "etisalat-data"
+#     }
+
+#     payload = {
+#         "request_id": generate_request_id(),
+#         "serviceID": network_map.get(request.data.get("network", "").lower()),
+#         "billersCode": request.data.get("phone"),
+#         "variation_code": request.data.get("variation_code"),
+#         "amount": request.data.get("amount"),
+#         "phone": request.data.get("phone"),
+#     }
+
+#     data, status = vtpass_post(
+#         "https://sandbox.vtpass.com/api/pay",
+#         payload
+#     )
+
+#     return Response(data, status=status)
+
+
+# # =========================
+# # GOTV / STARTIMES / SHOWMAX (CLEAN PATTERN)
+# # =========================
+
+# def get_variation(service_id):
+#     return vtpass_get(
+#         "https://sandbox.vtpass.com/api/service-variations",
+#         params={"serviceID": service_id}
+#     )
+
+
+# @api_view(['POST'])
+# def buy_gotv(request):
+
+#     billers_code = request.data.get("billersCode")
+#     variation_code = request.data.get("variation_code")
+#     phone = request.data.get("phone")
+
+#     if not all([billers_code, variation_code, phone]):
+#         return Response({"error": "missing fields"}, status=400)
+
+#     variations, _ = get_variation("gotv")
+
+#     real_price = next(
+#         (float(v["variation_amount"]) for v in variations["content"]["variations"]
+#          if v["variation_code"] == variation_code),
+#         None
+#     )
+
+#     if real_price is None:
+#         return Response({"error": "invalid variation"}, status=400)
+
+#     payload = {
+#         "request_id": generate_request_id(),
+#         "serviceID": "gotv",
+#         "billersCode": billers_code,
+#         "variation_code": variation_code,
+#         "amount": real_price,
+#         "phone": phone,
+#     }
+
+#     data, status = vtpass_post("https://sandbox.vtpass.com/api/pay", payload)
+#     return Response(data, status=status)
+
+
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def buy_product(request):
@@ -913,11 +1123,11 @@ def buy_product(request):
 
     try:
         amount = Decimal(str(request.data.get("amount")))
-    except:
+    except Exception:
         return Response({"error": "Invalid amount"}, status=400)
 
     if amount <= 0:
-        return Response({"error": "Amount must be > 0"}, status=400)
+        return Response({"error": "Amount must be greater than zero"}, status=400)
 
     with transaction.atomic():
 
@@ -929,186 +1139,85 @@ def buy_product(request):
         if wallet.amount < amount:
             return Response({"error": "Insufficient balance"}, status=400)
 
-        payload = None
-
-        # =========================
-        # AIRTIME
-        # =========================
+        # -------------------------
+        # Build VTpass payload
+        # -------------------------
         if product == "airtime":
+
             payload = {
                 "request_id": generate_request_id(),
                 "serviceID": request.data.get("network"),
                 "amount": str(amount),
-                "phone": request.data.get("phone")
+                "phone": request.data.get("phone"),
             }
 
-        # =========================
-        # DATA
-        # =========================
         elif product == "data":
+
             payload = {
                 "request_id": generate_request_id(),
                 "serviceID": request.data.get("network"),
                 "billersCode": request.data.get("phone"),
                 "variation_code": request.data.get("variation_code"),
                 "amount": str(amount),
-                "phone": request.data.get("phone")
+                "phone": request.data.get("phone"),
             }
 
-        # =========================
-        # CABLE TV
-        # =========================
         elif product == "cabletv":
+
             payload = {
                 "request_id": generate_request_id(),
                 "serviceID": request.data.get("serviceID"),
                 "billersCode": request.data.get("smartcard_number"),
                 "variation_code": request.data.get("variation_code"),
                 "amount": str(amount),
-                "phone": request.data.get("phone")
+                "phone": request.data.get("phone"),
             }
 
         else:
             return Response({"error": "Invalid product"}, status=400)
 
-        # =========================
-        # CALL VTU ONCE
-        # =========================
-        data, status = vtpass_post(
+        # -------------------------
+        # Call VTpass
+        # -------------------------
+        data, status_code = vtpass_post(
             "https://sandbox.vtpass.com/api/pay",
             payload
         )
 
-        if status != 200:
-            return Response(data, status=status)
+        if status_code != 200:
+            return Response(data, status=status_code)
 
+        # -------------------------
+        # Save transaction for webhook
+        # -------------------------
+        Transaction.objects.create(
+            user=user,
+            request_id=payload["request_id"],
+            transaction_id="",
+            product_name=product,
+            phone=request.data.get("phone", ""),
+            amount=amount,
+            total_amount=amount,
+            status="pending",
+            response_code="",
+            response_description="Pending",
+        )
+
+        # -------------------------
+        # Debit wallet
+        # -------------------------
         wallet.amount -= amount
         wallet.save(update_fields=["amount"])
 
         return Response({
             "success": True,
+            "message": "Purchase submitted successfully.",
+            "request_id": payload["request_id"],
             "product": product,
             "amount": str(amount),
             "new_balance": str(wallet.amount),
-            "api_response": data
+            "api_response": data,
         })
-
-
-# =========================
-# AIRTIME (STANDALONE)
-# =========================
-
-@api_view(['POST'])
-def buy_airtime(request):
-
-    service_map = {
-        "mtn": "mtn",
-        "airtel": "airtel",
-        "glo": "glo",
-        "9mobile": "9mobile"
-    }
-
-    network = request.data.get("network")
-    amount = request.data.get("amount")
-    phone = request.data.get("phone")
-
-    if not all([network, amount, phone]):
-        return Response({"error": "missing fields"}, status=400)
-
-    payload = {
-        "request_id": generate_request_id(),
-        "serviceID": service_map.get(network.lower()),
-        "amount": amount,
-        "phone": phone
-    }
-
-    data, status = vtpass_post(
-        "https://sandbox.vtpass.com/api/pay",
-        payload
-    )
-
-    return Response(data, status=status)
-
-
-# =========================
-# DATA (STANDALONE)
-# =========================
-
-@api_view(['POST'])
-def buy_data(request):
-
-    network_map = {
-        "mtn": "mtn-data",
-        "airtel": "airtel-data",
-        "glo": "glo-data",
-        "9mobile": "etisalat-data"
-    }
-
-    payload = {
-        "request_id": generate_request_id(),
-        "serviceID": network_map.get(request.data.get("network", "").lower()),
-        "billersCode": request.data.get("phone"),
-        "variation_code": request.data.get("variation_code"),
-        "amount": request.data.get("amount"),
-        "phone": request.data.get("phone"),
-    }
-
-    data, status = vtpass_post(
-        "https://sandbox.vtpass.com/api/pay",
-        payload
-    )
-
-    return Response(data, status=status)
-
-
-# =========================
-# GOTV / STARTIMES / SHOWMAX (CLEAN PATTERN)
-# =========================
-
-def get_variation(service_id):
-    return vtpass_get(
-        "https://sandbox.vtpass.com/api/service-variations",
-        params={"serviceID": service_id}
-    )
-
-
-@api_view(['POST'])
-def buy_gotv(request):
-
-    billers_code = request.data.get("billersCode")
-    variation_code = request.data.get("variation_code")
-    phone = request.data.get("phone")
-
-    if not all([billers_code, variation_code, phone]):
-        return Response({"error": "missing fields"}, status=400)
-
-    variations, _ = get_variation("gotv")
-
-    real_price = next(
-        (float(v["variation_amount"]) for v in variations["content"]["variations"]
-         if v["variation_code"] == variation_code),
-        None
-    )
-
-    if real_price is None:
-        return Response({"error": "invalid variation"}, status=400)
-
-    payload = {
-        "request_id": generate_request_id(),
-        "serviceID": "gotv",
-        "billersCode": billers_code,
-        "variation_code": variation_code,
-        "amount": real_price,
-        "phone": phone,
-    }
-
-    data, status = vtpass_post("https://sandbox.vtpass.com/api/pay", payload)
-    return Response(data, status=status)
-
-
-
-
-
 
 
 from decimal import Decimal
@@ -1127,115 +1236,113 @@ logger = logging.getLogger(__name__)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def vtpass_webhook(request):
-    """
-    VTpass Transaction Callback
-    """
 
     payload = request.data
-    logger.info("VTpass Webhook Received: %s", payload)
+    logger.info("VTpass Webhook RAW: %s", payload)
 
+    # =========================
+    # STEP 1: VALIDATE TYPE
+    # =========================
     if payload.get("type") != "transaction-update":
-        logger.warning("Unknown callback type: %s", payload.get("type"))
-        return Response({"response": "success"})
+        logger.warning("Ignored webhook type: %s", payload.get("type"))
+        return Response({"response": "ignored"})
 
-    data = payload.get("data", {})
-    trx = data.get("content", {}).get("transactions", {})
+    data = payload.get("data") or {}
 
+    content = data.get("content") or {}
+    trx = content.get("transactions") or {}
+
+    # =========================
+    # STEP 2: IDs (CORRECT VTpass format)
+    # =========================
     request_id = data.get("requestId")
 
+    transaction_id = trx.get("transactionId")
+
     if not request_id:
-        logger.warning("Missing requestId in webhook")
+        logger.warning("Missing requestId")
         return Response({"response": "success"})
+
+    request_id = str(request_id).strip()
+
+    logger.info("RequestId=%s | TransactionId=%s", request_id, transaction_id)
 
     try:
         with db_transaction.atomic():
 
-            txn = (
-                Transaction.objects
-                .select_for_update()
-                .filter(request_id=request_id)
-                .first()
-            )
+            # =========================
+            # STEP 3: FIND TRANSACTION (STRICT FIRST)
+            # =========================
+            txn = Transaction.objects.select_for_update().filter(
+                request_id=request_id
+            ).first()
 
-            if txn is None:
-                logger.warning("Transaction not found: %s", request_id)
+            # fallback match
+            if not txn and transaction_id:
+                txn = Transaction.objects.select_for_update().filter(
+                    transaction_id=transaction_id
+                ).first()
+
+            if not txn:
+                logger.warning(
+                    "Transaction NOT FOUND request_id=%s tx_id=%s",
+                    request_id,
+                    transaction_id
+                )
                 return Response({"response": "success"})
 
-            txn.status = trx.get("status", txn.status)
-            txn.response_code = data.get("code", "")
-            txn.response_description = data.get(
-                "response_description",
-                ""
-            )
+            # =========================
+            # STEP 4: CORRECT STATUS PATH
+            # =========================
+            status = trx.get("status")  # 👈 THIS IS CORRECT PLACE
+            if not status:
+                status = "pending"
 
-            txn.transaction_id = trx.get(
-                "transactionId",
-                txn.transaction_id,
-            )
+            status = str(status).lower().strip()
+            txn.status = status
 
-            txn.product_name = trx.get(
-                "product_name",
-                txn.product_name,
-            )
+            # =========================
+            # STEP 5: UPDATE FIELDS
+            # =========================
+            txn.transaction_id = transaction_id or txn.transaction_id
+            txn.product_name = trx.get("product_name") or txn.product_name
+            txn.phone = trx.get("phone") or txn.phone
+            txn.email = trx.get("email") or txn.email
 
-            txn.unique_element = trx.get(
-                "unique_element",
-                txn.unique_element,
-            )
+            def to_decimal(v):
+                try:
+                    return Decimal(str(v))
+                except:
+                    return None
 
-            txn.phone = trx.get(
-                "phone",
-                txn.phone,
-            )
+            amt = to_decimal(trx.get("amount"))
+            if amt:
+                txn.amount = amt
 
-            txn.email = trx.get(
-                "email",
-                txn.email,
-            )
+            txn.total_amount = to_decimal(trx.get("total_amount")) or txn.total_amount
 
-            if trx.get("amount") is not None:
-                txn.amount = Decimal(str(trx["amount"]))
+            txn.response_description = data.get("response_description") or txn.response_description
 
-            if trx.get("total_amount") is not None:
-                txn.total_amount = Decimal(str(trx["total_amount"]))
-
-            if trx.get("commission") is not None:
-                txn.commission = Decimal(str(trx["commission"]))
-
-            txn.wallet_credit_id = trx.get(
-                "wallet_credit_id",
-                txn.wallet_credit_id,
-            )
-
-            txn.purchased_code = data.get("purchased_code", "")
             txn.save()
 
-            if (
-                txn.status.lower() == "reversed"
-                and not txn.reversed
-            ):
-                wallet = Wallet.objects.select_for_update().get(
-                    owner=txn.user
-                )
+            # =========================
+            # STEP 6: HANDLE REVERSAL
+            # =========================
+            if status in ["reversed"] and not txn.reversed:
 
-                wallet.amount += txn.amount
-                wallet.save()
+                wallet = Wallet.objects.select_for_update().get(owner=txn.user)
+
+                wallet.amount += txn.amount or Decimal("0")
+                wallet.save(update_fields=["amount"])
 
                 txn.reversed = True
-                txn.save()
+                txn.save(update_fields=["reversed"])
 
-                logger.info(
-                    "Refunded ₦%s to %s",
-                    txn.amount,
-                    txn.user.username,
-                )
+                logger.info("Refunded %s to %s", txn.amount, txn.user)
 
-            logger.info(
-                "Transaction %s updated successfully",
-                request_id,
-            )
+            logger.info("UPDATED %s => %s", txn.request_id, txn.status)
 
-    except Exception:
-        logger.exception("VTpass webhook error")
+    except Exception as e:
+        logger.exception("VTpass webhook error: %s", e)
 
     return Response({"response": "success"})

@@ -489,7 +489,6 @@
 
 #     def __str__(self):
 #         return self.name
-
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -510,8 +509,7 @@ class Wallet(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    
-
+   
 
 class Transaction(models.Model):
 
@@ -529,17 +527,18 @@ class Transaction(models.Model):
         related_name="transactions"
     )
 
+    # Paystack reference (can repeat in edge cases, so NOT unique)
     reference = models.CharField(
         max_length=100,
-        unique=True,
         blank=True,
-        null=True
+        null=True,
+        db_index=True
     )
 
-    # VTpass requestId
+    # VTpass requestId (THIS is your real idempotency key)
     request_id = models.CharField(
         max_length=100,
-        unique=True,
+        unique=True,   # keep ONLY this unique
         db_index=True
     )
 
@@ -650,4 +649,4 @@ class VariationCode(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-  
+    
