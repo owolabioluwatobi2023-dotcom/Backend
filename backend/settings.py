@@ -17,7 +17,6 @@ import os
 import dj_database_url
 
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -29,11 +28,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-2q3*+9$im5lx)lh$$d60#!cdk1-7x2mb_utm0z5kkyh^e)_q3#'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = ["https://backend-1-dj3c.onrender.com", "backend-1-dj3c.onrender.com"]
-
-
+DEBUG = config("DEBUG", default=False, cast=bool)
 
 
 # Application definition
@@ -67,8 +63,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
 
 ]
-
-STATIC_URL = "/static/"
+STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
@@ -99,7 +94,9 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 
 DATABASES = {
-    "default": dj_database_url.parse(config('DATABASE_URL'))
+    "default": dj_database_url.config(
+        default=config("DATABASE_URL")
+    )
 }
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -147,7 +144,7 @@ REST_FRAMEWORK = {
         
     )
 }
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -183,12 +180,12 @@ DEFAULT_FROM_EMAIL = "Mass Data <owolabioluwatobi2023@gmail.com>"
 
 
 
-# DEBUG = False
 
-# ALLOWED_HOSTS = [
-#     "127.0.0.1",
-#     "localhost",
-#     ".onrender.com",
-# ]
+
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    ".onrender.com",
+]
 
 
