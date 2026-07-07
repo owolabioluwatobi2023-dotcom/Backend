@@ -1983,33 +1983,6 @@ def register_user(request):
         first_name=first_name,
         last_name=last_name
     )
-
-    # Send welcome email
-    if user.email:
-        try:
-            send_mail(
-                subject="🎉 Welcome to Mass Data",
-                message=f"""
-Hello {user.first_name or user.username},
-
-Welcome to Mass Data!
-
-Your account has been created successfully.
-
-Thank you for choosing Mass Data.
-
-Regards,
-Mass Data Team
-""",
-
-
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
-        except Exception as e:
-            print("Email Error:", e)
-
     # Generate JWT token
     refresh = RefreshToken.for_user(user)
 
@@ -2087,30 +2060,7 @@ def login_user(request):
             status=400
         )
 
-    # Generate JWT token first
     token = RefreshToken.for_user(user)
-
-    # Send email but never break login
-    if user.email:
-        try:
-            send_mail(
-                subject="Security Alert - New Login",
-                message=f"""
-Hello {user.first_name or user.username},
-
-We detected a login to your Mass Data account.
-
-If this was you, ignore this message.
-
-Mass Data Security Team
-""",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=True,
-            )
-
-        except Exception as e:
-            print("Login email failed:", str(e))
 
     return Response({
         "access": str(token.access_token),
