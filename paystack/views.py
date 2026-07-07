@@ -1951,7 +1951,7 @@ def vtpass_webhook(request):
             # =========================
             status = trx.get("status")  # 👈 THIS IS CORRECT PLACE
             if not status:
-                status = "pending"
+                status = "Delivery"
 
             status = str(status).lower().strip()
             txn.status = status
