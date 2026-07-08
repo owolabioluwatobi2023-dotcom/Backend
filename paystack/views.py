@@ -1523,7 +1523,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Wallet, Transaction
-from .utils import generate_request_id, vtpass_post
 
 
 # ======================================================
