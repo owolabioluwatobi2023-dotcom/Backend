@@ -1110,7 +1110,655 @@ def vtpass_get(url, params=None):
 
 #     data, status = vtpass_post("https://sandbox.vtpass.com/api/pay", payload)
 #     return Response(data, status=status)
+from decimal import Decimal
+from django.db import transaction
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import Wallet, Transaction
+from .utils import generate_request_id, vtpass_post, vtpass_get
+
+
+
+# ======================================================
+# VTpass SUCCESS CHECK
+# ======================================================
+
+def vtpass_success(data):
+
+    return (
+        data.get("code") == "000"
+        or
+        data.get("response_code") == "000"
+        or
+        data.get("content", {})
+        .get("transactions", {})
+        .get("status", "")
+        .lower() == "delivered"
+    )
+
+
+
+# ======================================================
+# SERVICE MAPS
+# ======================================================
+
+
+AIRTIME_MAP = {
+
+    "mtn": "mtn",
+
+    "glo": "glo",
+
+    "airtel": "airtel",
+
+    "9mobile": "etisalat",
+
+    "intl": "intl"
+
+}
+
+
+
+DATA_MAP = {
+
+    "mtn": "mtn-data",
+
+    "airtel": "airtel-data",
+
+    "glo": "glo-data",
+
+    "glo-sme": "glo-sme-data",
+
+    "9mobile": "etisalat-data",
+
+    "smile": "smile-direct",
+
+    "spectranet": "spectranet"
+
+}
+
+
+
+CABLE_MAP = {
+
+    "dstv": "dstv",
+
+    "gotv": "gotv",
+
+    "startimes": "startimes",
+
+    "showmax": "showmax"
+
+}
+
+
+
+
+
+# ======================================================
+# AIRTIME API
+# MTN
+# GLO
+# AIRTEL
+# 9MOBILE
+# INTERNATIONAL
+# ======================================================
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def buy_airtime(request):
+
+    user = request.user
+
+
+    network = request.data.get(
+        "network",
+        ""
+    ).lower()
+
+
+    amount = request.data.get(
+        "amount"
+    )
+
+
+    phone = request.data.get(
+        "phone"
+    )
+
+
+    if not all([
+        network,
+        amount,
+        phone
+    ]):
+
+        return Response(
+            {
+                "error":"missing fields"
+            },
+            status=400
+        )
+
+
+
+    serviceID = AIRTIME_MAP.get(
+        network
+    )
+
+
+    if not serviceID:
+
+        return Response(
+            {
+                "error":"Invalid airtime network"
+            },
+            status=400
+        )
+
+
+
+    amount = Decimal(
+        str(amount)
+    )
+
+
+
+    with transaction.atomic():
+
+
+        wallet, _ = Wallet.objects.select_for_update().get_or_create(
+
+            owner=user,
+
+            defaults={
+                "amount":Decimal("0.00")
+            }
+
+        )
+
+
+
+        if wallet.amount < amount:
+
+            return Response(
+                {
+                    "error":"Insufficient balance"
+                },
+                status=400
+            )
+
+
+
+        request_id = generate_request_id()
+
+
+
+        payload = {
+
+            "request_id":request_id,
+
+            "serviceID":serviceID,
+
+            "amount":str(amount),
+
+            "phone":phone
+
+        }
+
+
+
+        data,status = vtpass_post(
+
+            "https://sandbox.vtpass.com/api/pay",
+
+            payload
+
+        )
+
+
+
+        if status != 200 or not vtpass_success(data):
+
+            return Response(
+                data,
+                status=400
+            )
+
+
+
+        wallet.amount -= amount
+
+        wallet.save()
+
+
+
+        Transaction.objects.create(
+
+            owner=user,
+
+            amount=amount,
+
+            product=f"{network.upper()} Airtime",
+
+            transaction_type="debit",
+
+            reference=request_id,
+
+            status="successful"
+
+        )
+
+
+
+        return Response(
+            data,
+            status=200
+        )
+
+
+
+        # ======================================================
+# DATA API
+#
+# MTN DATA
+# AIRTEL DATA
+# GLO DATA
+# GLO SME DATA
+# 9MOBILE DATA
+# SMILE
+# SPECTRANET
+# ======================================================
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def buy_data(request):
+
+    user = request.user
+
+
+    network = request.data.get(
+        "network",
+        ""
+    ).lower()
+
+
+    phone = request.data.get(
+        "phone"
+    )
+
+
+    amount = request.data.get(
+        "amount"
+    )
+
+
+    variation_code = request.data.get(
+        "variation_code"
+    )
+
+
+
+    if not all([
+        network,
+        phone,
+        amount,
+        variation_code
+    ]):
+
+        return Response(
+            {
+                "error":"missing fields"
+            },
+            status=400
+        )
+
+
+
+    serviceID = DATA_MAP.get(
+        network
+    )
+
+
+
+    if not serviceID:
+
+        return Response(
+            {
+                "error":"Invalid data service"
+            },
+            status=400
+        )
+
+
+
+    amount = Decimal(
+        str(amount)
+    )
+
+
+
+    with transaction.atomic():
+
+
+        wallet, _ = Wallet.objects.select_for_update().get_or_create(
+
+            owner=user,
+
+            defaults={
+                "amount":Decimal("0.00")
+            }
+
+        )
+
+
+
+        # CHECK BALANCE FIRST
+
+        if wallet.amount < amount:
+
+            return Response(
+
+                {
+                    "error":"Insufficient balance"
+                },
+
+                status=400
+
+            )
+
+
+
+        request_id = generate_request_id()
+
+
+
+        payload = {
+
+
+            "request_id":request_id,
+
+
+            "serviceID":serviceID,
+
+
+            "billersCode":phone,
+
+
+            "variation_code":variation_code,
+
+
+            "amount":str(amount),
+
+
+            "phone":phone
+
+        }
+
+
+
+        data,status = vtpass_post(
+
+            "https://sandbox.vtpass.com/api/pay",
+
+            payload
+
+        )
+
+
+
+        # ONLY CONTINUE IF VTPASS SUCCESS
+
+        if status != 200 or not vtpass_success(data):
+
+            return Response(
+
+                data,
+
+                status=400
+
+            )
+
+
+
+        # DEDUCT AFTER SUCCESS
+
+        wallet.amount -= amount
+
+        wallet.save()
+
+
+
+        Transaction.objects.create(
+
+            owner=user,
+
+
+            amount=amount,
+
+
+            product=f"{network.upper()} Data",
+
+
+            transaction_type="debit",
+
+
+            reference=request_id,
+
+
+            status="successful"
+
+        )
+
+
+
+        return Response(
+
+            data,
+
+            status=200
+
+        )
+    
+
+
+    # ======================================================
+# CABLE TV / SHOWMAX
+#
+# DSTV
+# GOTV
+# STARTIMES
+# SHOWMAX
+# ======================================================
+
+def get_variation(service_id):
+
+    return vtpass_get(
+        "https://sandbox.vtpass.com/api/service-variations",
+        params={
+            "serviceID": service_id
+        }
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def buy_cable(request):
+
+    user = request.user
+
+    service = request.data.get(
+        "serviceID",
+        ""
+    ).lower()
+
+    billers_code = request.data.get(
+        "billersCode"
+    )
+
+    variation_code = request.data.get(
+        "variation_code"
+    )
+
+    phone = request.data.get(
+        "phone"
+    )
+
+
+    if not all([
+        service,
+        billers_code,
+        variation_code,
+        phone
+    ]):
+
+        return Response(
+            {
+                "error": "missing fields"
+            },
+            status=400
+        )
+
+
+    serviceID = CABLE_MAP.get(service)
+
+    if not serviceID:
+
+        return Response(
+            {
+                "error": "Invalid cable service"
+            },
+            status=400
+        )
+
+
+    variations, status = get_variation(serviceID)
+
+    if status != 200:
+
+        return Response(
+            variations,
+            status=status
+        )
+
+
+    real_price = next(
+
+        (
+            Decimal(str(v["variation_amount"]))
+
+            for v in variations["content"]["variations"]
+
+            if v["variation_code"] == variation_code
+
+        ),
+
+        None
+
+    )
+
+
+    if real_price is None:
+
+        return Response(
+            {
+                "error": "Invalid variation"
+            },
+            status=400
+        )
+
+
+    with transaction.atomic():
+
+        wallet, _ = Wallet.objects.select_for_update().get_or_create(
+
+            owner=user,
+
+            defaults={
+                "amount": Decimal("0.00")
+            }
+
+        )
+
+
+        if wallet.amount < real_price:
+
+            return Response(
+                {
+                    "error": "Insufficient balance"
+                },
+                status=400
+            )
+
+
+        request_id = generate_request_id()
+
+
+        payload = {
+
+            "request_id": request_id,
+
+            "serviceID": serviceID,
+
+            "billersCode": billers_code,
+
+            "variation_code": variation_code,
+
+            "amount": str(real_price),
+
+            "phone": phone
+
+        }
+
+
+        data, status = vtpass_post(
+
+            "https://sandbox.vtpass.com/api/pay",
+
+            payload
+
+        )
+
+
+        if status != 200 or not vtpass_success(data):
+
+            return Response(
+                data,
+                status=400
+            )
+
+
+        wallet.amount -= real_price
+
+        wallet.save()
+
+
+        Transaction.objects.create(
+
+            owner=user,
+
+            amount=real_price,
+
+            product=f"{service.upper()} Subscription",
+
+            transaction_type="debit",
+
+            reference=request_id,
+
+            status="successful"
+
+        )
+
+
+        return Response(
+            data,
+            status=200
+        )
 
 # from decimal import Decimal
 # from django.db import transaction
@@ -1363,20 +2011,6 @@ def vtpass_get(url, params=None):
 
 
 
-
-
-
-
-
-
-
-
-
-
-# ======================================================
-# 🔥 PRODUCT MAPPING (YOUR SYSTEM LOGIC)
-# ======================================================
-
 # ======================================================
 # 🔥 MAIN PURCHASE API
 # ======================================================
@@ -1514,250 +2148,6 @@ def vtpass_get(url, params=None):
 #             "api_response": data,
 #         })
 
-
-
-from decimal import Decimal
-from django.db import transaction
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
-from .models import Wallet, Transaction
-
-
-# ======================================================
-# PRODUCT MAP
-# ======================================================
-
-PRODUCT_MAP = {
-    "product_1": "airtime",
-    "product_2": "data",
-    "product_3": "cabletv",
-}
-
-
-# ======================================================
-# VTpass SERVICE MAP
-# ======================================================
-
-VTU_SERVICE_MAP = {
-    # Airtime
-    "mtn": "mtn",
-    "airtel": "airtel",
-    "glo": "glo",
-    "9mobile": "etisalat",
-    "intl": "intl",
-
-    # Data
-    "mtn-data": "mtn",
-    "airtel-data": "airtel",
-    "glo-data": "glo",
-    "glo-sme": "glo-sme-data",
-    "9mobile-data": "etisalat",
-    "smile": "smile-direct",
-    "spectranet": "spectranet",
-
-    # Cable TV
-    "dstv": "dstv",
-    "gotv": "gotv",
-    "startimes": "startimes",
-}
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def buy_product(request):
-
-    user = request.user
-
-    product_key = str(request.data.get("product", "")).lower().strip()
-    product = PRODUCT_MAP.get(product_key)
-
-    if not product:
-        return Response({"error": "Invalid product"}, status=400)
-
-    try:
-        amount = Decimal(str(request.data.get("amount")))
-    except Exception:
-        return Response({"error": "Invalid amount"}, status=400)
-
-    if amount <= 0:
-        return Response({"error": "Amount must be greater than zero"}, status=400)
-
-    phone = request.data.get("phone")
-
-    if not phone:
-        return Response({"error": "Phone number is required"}, status=400)
-
-    with transaction.atomic():
-
-        wallet, _ = Wallet.objects.select_for_update().get_or_create(
-            owner=user,
-            defaults={"amount": Decimal("0.00")}
-        )
-
-        if wallet.amount < amount:
-            return Response({"error": "Insufficient balance"}, status=400)
-
-        request_id = generate_request_id()
-
-        payload = {
-            "request_id": request_id,
-            "amount": str(amount),
-            "phone": phone,
-        }
-
-        # ======================================================
-        # AIRTIME
-        # ======================================================
-
-        if product == "airtime":
-
-            network = request.data.get("network", "").lower().strip()
-
-            serviceID = VTU_SERVICE_MAP.get(network)
-
-            if not serviceID:
-                return Response({"error": "Invalid airtime network"}, status=400)
-
-            payload["serviceID"] = serviceID
-
-        # ======================================================
-        # DATA
-        # ======================================================
-
-        elif product == "data":
-
-            network = request.data.get("network", "").lower().strip()
-            variation_code = request.data.get("variation_code")
-
-            if not network:
-                return Response({"error": "Network required"}, status=400)
-
-            if not variation_code:
-                return Response({"error": "variation_code required"}, status=400)
-
-            serviceID = VTU_SERVICE_MAP.get(network)
-
-            if not serviceID:
-                return Response({"error": "Invalid data network"}, status=400)
-
-            payload.update({
-                "serviceID": serviceID,
-                "billersCode": phone,
-                "variation_code": variation_code,
-            })
-
-        # ======================================================
-        # CABLE TV
-        # ======================================================
-
-        elif product == "cabletv":
-
-            service = request.data.get("serviceID", "").lower().strip()
-            variation_code = request.data.get("variation_code")
-            smartcard = request.data.get("smartcard_number")
-
-            if not variation_code:
-                return Response({"error": "variation_code required"}, status=400)
-
-            if not smartcard:
-                return Response({"error": "smartcard_number required"}, status=400)
-
-            serviceID = VTU_SERVICE_MAP.get(service)
-
-            if not serviceID:
-                return Response({"error": "Invalid cable service"}, status=400)
-
-            payload.update({
-                "serviceID": serviceID,
-                "billersCode": smartcard,
-                "variation_code": variation_code,
-            })
-
-        print("========== FINAL PAYLOAD ==========")
-        print(payload)
-        print("===================================")
-
-        # ======================================================
-        # SEND TO VTPASS
-        # ======================================================
-
-        try:
-            data, status_code = vtpass_post(
-                "https://sandbox.vtpass.com/api/pay",
-                payload
-            )
-        except Exception as e:
-            return Response(
-                {
-                    "error": "Unable to connect to VTpass",
-                    "details": str(e)
-                },
-                status=500
-            )
-
-        print("========== VTPASS RESPONSE ==========")
-        print(data)
-        print("=====================================")
-
-        if status_code != 200:
-            return Response(data, status=status_code)
-
-        success = (
-            data.get("code") == "000"
-            or data.get("response_code") == "000"
-            or data.get("response_description", "").lower() == "transaction successful"
-            or data.get("content", {})
-                .get("transactions", {})
-                .get("status", "")
-                .lower() == "delivered"
-        )
-
-        if not success:
-
-            Transaction.objects.create(
-                owner=user,
-                amount=amount,
-                transaction_type="debit",
-                product=product,
-                reference=request_id,
-                status="failed",
-            )
-
-            return Response(data, status=400)
-
-        # ======================================================
-        # DEBIT WALLET
-        # ======================================================
-
-        wallet.amount -= amount
-        wallet.save()
-
-        # ======================================================
-        # SAVE TRANSACTION
-        # ======================================================
-
-        Transaction.objects.create(
-            owner=user,
-            amount=amount,
-            transaction_type="debit",
-            product=product,
-            reference=request_id,
-            status="successful",
-        )
-
-        return Response(
-            {
-                "message": f"{product.title()} purchase successful",
-                "reference": request_id,
-                "wallet_balance": str(wallet.amount),
-                "vtpass": data,
-            },
-            status=200,
-        )
-        
-    
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])
 # def buy_product(request):
