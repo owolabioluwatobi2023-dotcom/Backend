@@ -1373,14 +1373,9 @@ def vtpass_get(url, params=None):
 
 
 
-from decimal import Decimal
-from django.db import transaction
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
 # ======================================================
 # 🔥 PRODUCT MAPPING (YOUR SYSTEM LOGIC)
+# ======================================================
 
 # ======================================================
 # 🔥 MAIN PURCHASE API
@@ -1518,6 +1513,8 @@ from rest_framework.response import Response
 #             "new_balance": str(wallet.amount),
 #             "api_response": data,
 #         })
+
+
 
 from decimal import Decimal
 from django.db import transaction
@@ -1942,7 +1939,7 @@ def vtpass_webhook(request):
             # =========================
             status = trx.get("status")  # 👈 THIS IS CORRECT PLACE
             if not status:
-                status = "Delivery"
+                status = "pending"
 
             status = str(status).lower().strip()
             txn.status = status
