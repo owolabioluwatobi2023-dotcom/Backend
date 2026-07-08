@@ -2038,28 +2038,17 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
+
 @api_view(['POST'])
 def login_user(request):
     username = request.data.get("username")
     password = request.data.get("password")
 
-    if not username or not password:
-        return Response(
-            {"error": "Username and password required"},
-            status=400
-        )
-
-    user = authenticate(
-        username=username,
-        password=password
-    )
+    user = authenticate(username=username, password=password)
 
     if user is None:
-        return Response(
-            {"error": "Invalid credentials"},
-            status=400
-        )
-
+        return Response({"error": "Invalid credentials"}, status=400)
+    # Generate JWT token
     token = RefreshToken.for_user(user)
 
     return Response({
@@ -2070,55 +2059,8 @@ def login_user(request):
             "username": user.username,
             "first_name": user.first_name,
             "last_name": user.last_name,
-            "email": user.email,
         }
     })
-# @api_view(['POST'])
-# def login_user(request):
-#     username = request.data.get("username")
-#     password = request.data.get("password")
-
-#     user = authenticate(username=username, password=password)
-
-#     if user is None:
-#         return Response({"error": "Invalid credentials"}, status=400)
-
-#     # Send security alert email
-#     if user.email:
-#         try:
-#             send_mail(
-#                 subject="Security Alert - New Login",
-#                 message=f"""
-# Hello {user.first_name or user.username},
-
-# We detected a login to your Mass Data account.
-
-# If this was you, you can ignore this email.
-
-# If this was NOT you, please change your password immediately.
-
-# Mass Data Security Team
-# """,
-#                 from_email=settings.DEFAULT_FROM_EMAIL,
-#                 recipient_list=[user.email],
-#                 fail_silently=False,
-#             )
-#         except Exception as e:
-#             print("Email Error:", e)
-
-#     # Generate JWT token
-#     token = RefreshToken.for_user(user)
-
-#     return Response({
-#         "access": str(token.access_token),
-#         "refresh": str(token),
-#         "user": {
-#             "id": user.id,
-#             "username": user.username,
-#             "first_name": user.first_name,
-#             "last_name": user.last_name,
-#         }
-#     })
 # =========================
 # PROFILE
 # =========================
