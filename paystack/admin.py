@@ -1,5 +1,36 @@
 from django.contrib import admin
 from .models import Wallet, Transaction
+
+
+# =========================
+# WALLET ADMIN
+# =========================
+
+@admin.register(Wallet)
+class WalletAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "owner",
+        "amount",
+        "created_at",
+        "updated_at",
+    )
+
+    search_fields = (
+        "owner__username",
+        "owner__email",
+    )
+
+    ordering = (
+        "-updated_at",
+    )
+
+
+
+# =========================
+# TRANSACTION ADMIN
+# =========================
+
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
 
@@ -8,7 +39,7 @@ class TransactionAdmin(admin.ModelAdmin):
         "user",
         "service",
         "product_name",
-        "show_variation",
+        "variation_name",
         "phone",
         "amount",
         "profit",
@@ -24,9 +55,9 @@ class TransactionAdmin(admin.ModelAdmin):
         "phone",
         "request_id",
         "transaction_id",
+        "variation_code",
+        "variation_name",
         "reference",
-        "variation__name",
-        "variation__variation_code",
     )
 
 
@@ -70,7 +101,8 @@ class TransactionAdmin(admin.ModelAdmin):
                 "fields": (
                     "service",
                     "product_name",
-                    "variation",
+                    "variation_code",
+                    "variation_name",
                 )
             },
         ),
@@ -133,11 +165,3 @@ class TransactionAdmin(admin.ModelAdmin):
     ordering = (
         "-created_at",
     )
-
-
-    def show_variation(self, obj):
-        if obj.variation:
-            return obj.variation.name
-        return "-"
-
-    show_variation.short_description = "Variation"
