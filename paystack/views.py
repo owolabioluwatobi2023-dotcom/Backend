@@ -553,41 +553,23 @@ def buy_product(request):
         # ======================================================
         # SAVE TRANSACTION
         # ======================================================
-
-
         Transaction.objects.create(
+    user=user,
+    payment_method="wallet",
+    request_id=request_id,
+    transaction_id=transaction_data.get("transactionId", ""),
+    product_name=service_name,
+    phone=phone,
 
-            user=user,
+    amount=base_amount,          # VTpass cost
+    profit=profit,               # Your gain
+    total_amount=total_amount,   # Customer paid
 
-
-            request_id=request_id,
-
-
-            transaction_id=transaction_data.get(
-                "transactionId",
-                ""
-            ),
-
-
-            product_name=service_name,
-
-
-            phone=phone,
-
-
-            amount=amount,
-
-
-            total_amount=amount,
-
-
-            status=transaction_data.get(
-                "status",
-                "delivered"
-            ),
-
-
-        )
+    commission=Decimal(
+        str(transaction_data.get("commission", 0))
+    ),
+    status="delivered",
+)
 
 
 
