@@ -343,78 +343,235 @@ def vtpass_auth():
 
 
 
-# # webbook
+# # # webbook
+# from decimal import Decimal
+# import requests
+# from django.conf import settings
+# from rest_framework.decorators import api_view
+# from rest_framework.response import Response
+
+# from paystack.models import Wallet, Transaction, VariationCode
+# @api_view(["GET"])
+# def service_variations(request):
+#     service_id = request.GET.get("serviceID")
+
+#     if not service_id:
+#         return Response(
+#             {"error": "serviceID is required"},
+#             status=400
+#         )
+
+#     headers = {
+#         "api-key": settings.VTPASS_API_KEY,
+#         "public-key": settings.VTPASS_PUBLIC_KEY,
+#     }
+
+#     response = requests.get(
+#         "https://sandbox.vtpass.com/api/service-variations",
+#         params={"serviceID": service_id},
+#         headers=headers,
+#         timeout=30,
+#     )
+
+#     data = response.json()
+
+#     variations = data.get("content", {}).get("variations", [])
+
+#     PROFIT = Decimal("1.00")
+
+#     clean = []
+
+#     for item in variations:
+
+#         variation_code = item.get("variation_code")
+#         name = item.get("name")
+
+#         try:
+#             amount = Decimal(
+#                 str(item.get("variation_amount", 0))
+#             )
+#         except Exception:
+#             amount = Decimal("0.00")
+
+#         # Save or update in database
+#         VariationCode.objects.update_or_create(
+#             variation_code=variation_code,
+#             defaults={
+#                 "service_id": service_id,
+#                 "name": name,
+#                 "amount": amount,
+#                 "fixed_price": True,
+#                 "active": True,
+#             },
+#         )
+
+#         clean.append({
+#             "variation_code": variation_code,
+#             "name": name,
+#             "price": float(amount + PROFIT),
+#         })
+
+#     return Response({
+#         "response_description": data.get("response_description"),
+#         "content": {
+#             "serviceID": service_id,
+#             "variations": clean,
+#         },
+#     })
+
+
+
 from decimal import Decimal
 import requests
+
 from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from paystack.models import Wallet, Transaction, VariationCode
+from .models import VariationCode
+
+
+
 @api_view(["GET"])
 def service_variations(request):
+
     service_id = request.GET.get("serviceID")
 
+
     if not service_id:
+
         return Response(
-            {"error": "serviceID is required"},
+            {
+                "error":"serviceID is required"
+            },
             status=400
         )
 
+
+
     headers = {
+
         "api-key": settings.VTPASS_API_KEY,
+
         "public-key": settings.VTPASS_PUBLIC_KEY,
+
     }
 
+
+
     response = requests.get(
+
         "https://sandbox.vtpass.com/api/service-variations",
-        params={"serviceID": service_id},
+
+        params={
+            "serviceID":service_id
+        },
+
         headers=headers,
+
         timeout=30,
+
     )
+
+
 
     data = response.json()
 
-    variations = data.get("content", {}).get("variations", [])
+
+
+    variations = (
+        data
+        .get("content", {})
+        .get("variations", [])
+    )
+
+
 
     PROFIT = Decimal("1.00")
 
     clean = []
 
+
+
     for item in variations:
 
-        variation_code = item.get("variation_code")
-        name = item.get("name")
 
-        try:
-            amount = Decimal(
-                str(item.get("variation_amount", 0))
-            )
-        except Exception:
-            amount = Decimal("0.00")
-
-        # Save or update in database
-        VariationCode.objects.update_or_create(
-            variation_code=variation_code,
-            defaults={
-                "service_id": service_id,
-                "name": name,
-                "amount": amount,
-                "fixed_price": True,
-                "active": True,
-            },
+        variation_code = item.get(
+            "variation_code"
         )
 
+
+        name = item.get(
+            "name"
+        )
+
+
+
+        try:
+
+            amount = Decimal(
+                str(
+                    item.get(
+                        "variation_amount",
+                        0
+                    )
+                )
+            )
+
+        except:
+
+            amount = Decimal("0.00")
+
+
+
+        VariationCode.objects.update_or_create(
+
+            variation_code=variation_code,
+
+            defaults={
+
+                "service": service_id,
+
+                "name": name,
+
+                "amount": amount,
+
+                "fixed_price": True,
+
+                "active": True,
+
+            },
+
+        )
+
+
+
         clean.append({
-            "variation_code": variation_code,
-            "name": name,
-            "price": float(amount + PROFIT),
+
+            "variation_code":variation_code,
+
+            "name":name,
+
+            "price":str(
+                amount + PROFIT
+            ),
+
         })
 
+
+
     return Response({
-        "response_description": data.get("response_description"),
-        "content": {
-            "serviceID": service_id,
-            "variations": clean,
-        },
+
+        "response_description":data.get(
+            "response_description"
+        ),
+
+        "content":{
+
+            "serviceID":service_id,
+
+            "variations":clean,
+
+        }
+
     })
