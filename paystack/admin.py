@@ -12,6 +12,7 @@ class WalletAdmin(admin.ModelAdmin):
     list_display = (
         "owner",
         "amount",
+        "created_at",
         "updated_at",
     )
 
@@ -23,6 +24,7 @@ class WalletAdmin(admin.ModelAdmin):
     ordering = (
         "-updated_at",
     )
+
 
 
 # =========================
@@ -42,19 +44,21 @@ class TransactionAdmin(admin.ModelAdmin):
         "amount",
         "profit",
         "commission",
-        "total_amount",
         "status",
         "created_at",
     )
 
+
     search_fields = (
         "user__username",
+        "user__email",
         "phone",
         "request_id",
         "transaction_id",
-        "variation_name",
         "variation_code",
+        "variation_name",
     )
+
 
     list_filter = (
         "service",
@@ -62,9 +66,6 @@ class TransactionAdmin(admin.ModelAdmin):
         "created_at",
     )
 
-    ordering = (
-        "-created_at",
-    )
 
     readonly_fields = (
         "request_id",
@@ -78,71 +79,15 @@ class TransactionAdmin(admin.ModelAdmin):
         "updated_at",
     )
 
-    fieldsets = (
-        (
-            "Transaction Information",
-            {
-                "fields": (
-                    "user",
-                    "service",
-                    "product_name",
-                    "variation_code",
-                    "variation_name",
-                    "phone",
-                    "email",
-                    "status",
-                )
-            },
-        ),
-        (
-            "Money",
-            {
-                "fields": (
-                    "amount",
-                    "profit",
-                    "commission",
-                    "total_amount",
-                    "initial_balance",
-                    "final_balance",
-                )
-            },
-        ),
-        (
-            "Identifiers",
-            {
-                "fields": (
-                    "request_id",
-                    "transaction_id",
-                    "reference",
-                )
-            },
-        ),
-        (
-            "VTpass Response",
-            {
-                "fields": (
-                    "response_code",
-                    "response_description",
-                    "purchased_code",
-                    "wallet_credit_id",
-                    "unique_element",
-                )
-            },
-        ),
-        (
-            "Dates",
-            {
-                "fields": (
-                    "created_at",
-                    "updated_at",
-                )
-            },
-        ),
+
+    ordering = (
+        "-created_at",
     )
 
 
+
 # =========================
-# VARIATION CODE ADMIN
+# VARIATION ADMIN
 # =========================
 
 @admin.register(VariationCode)
@@ -155,7 +100,9 @@ class VariationCodeAdmin(admin.ModelAdmin):
         "amount",
         "fixed_price",
         "active",
+        "created_at",
     )
+
 
     search_fields = (
         "service",
@@ -163,11 +110,13 @@ class VariationCodeAdmin(admin.ModelAdmin):
         "name",
     )
 
+
     list_filter = (
         "service",
         "active",
         "fixed_price",
     )
+
 
     ordering = (
         "service",
