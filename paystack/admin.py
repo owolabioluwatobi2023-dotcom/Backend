@@ -26,7 +26,6 @@ class WalletAdmin(admin.ModelAdmin):
     )
 
 
-
 # =========================
 # TRANSACTION ADMIN
 # =========================
@@ -39,7 +38,7 @@ class TransactionAdmin(admin.ModelAdmin):
         "user",
         "service",
         "product_name",
-        "variation_name",
+        "show_variation",
         "phone",
         "amount",
         "profit",
@@ -55,9 +54,9 @@ class TransactionAdmin(admin.ModelAdmin):
         "phone",
         "request_id",
         "transaction_id",
-        "variation_code",
-        "variation_name",
         "reference",
+        "variation__variation_code",
+        "variation__name",
     )
 
 
@@ -101,8 +100,7 @@ class TransactionAdmin(admin.ModelAdmin):
                 "fields": (
                     "service",
                     "product_name",
-                    "variation_code",
-                    "variation_name",
+                    "variation",
                 )
             },
         ),
@@ -165,3 +163,12 @@ class TransactionAdmin(admin.ModelAdmin):
     ordering = (
         "-created_at",
     )
+
+
+    def show_variation(self, obj):
+        if obj.variation:
+            return obj.variation.name
+        return "-"
+
+
+    show_variation.short_description = "Variation"
