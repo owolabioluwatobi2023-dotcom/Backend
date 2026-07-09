@@ -635,6 +635,441 @@ def vtpass_get(url, params=None):
 
 #         })
 
+# from decimal import Decimal
+
+# from django.db import transaction
+
+# from rest_framework.decorators import api_view, permission_classes
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework.response import Response
+
+# from .models import Wallet, Transaction, VariationCode
+
+
+
+# # ======================================================
+# # PRODUCT MAPPING
+# # ======================================================
+
+# PRODUCT_MAP = {
+#     "product_1": "airtime",
+#     "product_2": "data",
+#     "product_3": "cabletv",
+# }
+
+
+
+# # ======================================================
+# # VTpass SERVICE MAP
+# # ======================================================
+
+# VTU_SERVICE_MAP = {
+
+#     "mtn": "mtn",
+#     "airtel": "airtel",
+#     "glo": "glo",
+#     "9mobile": "etisalat",
+
+#     "mtn-data": "mtn-data",
+#     "airtel-data": "airtel-data",
+#     "glo-data": "glo-data",
+#     "9mobile-data": "etisalat-data",
+
+#     "dstv": "dstv",
+#     "gotv": "gotv",
+#     "startimes": "startimes",
+
+# }
+
+
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def buy_product(request):
+
+#     user = request.user
+
+
+#     product_key = str(
+#         request.data.get("product", "")
+#     ).lower().strip()
+
+
+#     product = PRODUCT_MAP.get(product_key)
+
+
+#     if not product:
+
+#         return Response(
+#             {
+#                 "error": "Invalid product"
+#             },
+#             status=400
+#         )
+
+
+#     try:
+
+#         amount = Decimal(
+#             str(
+#                 request.data.get("amount")
+#             )
+#         )
+
+#     except:
+
+#         return Response(
+#             {
+#                 "error":"Invalid amount"
+#             },
+#             status=400
+#         )
+
+
+
+#     phone = str(
+#         request.data.get("phone","")
+#     ).strip()
+
+
+
+#     variation_code = ""
+
+#     variation_name = ""
+
+#     service_name = ""
+
+
+
+#     with transaction.atomic():
+
+
+
+#         wallet, _ = Wallet.objects.select_for_update().get_or_create(
+#             owner=user,
+#             defaults={
+#                 "amount": Decimal("0.00")
+#             }
+#         )
+
+
+
+#         if wallet.amount < amount:
+
+#             return Response(
+#                 {
+#                     "error":"Insufficient balance"
+#                 },
+#                 status=400
+#             )
+
+
+
+#         request_id = generate_request_id()
+
+
+
+#         payload = {
+
+#             "request_id": request_id,
+
+#             "amount": str(amount),
+
+#             "phone": phone,
+
+#         }
+
+
+
+#         # ==========================
+#         # AIRTIME
+#         # ==========================
+
+#         if product == "airtime":
+
+
+#             network = str(
+#                 request.data.get("network","")
+#             ).lower().strip()
+
+
+
+#             service_id = VTU_SERVICE_MAP.get(
+#                 network
+#             )
+
+
+#             if not service_id:
+
+#                 return Response(
+#                     {
+#                         "error":"Invalid network"
+#                     },
+#                     status=400
+#                 )
+
+
+#             service_name = (
+#                 f"{network.upper()} Airtime"
+#             )
+
+
+#             payload.update({
+
+#                 "serviceID":service_id
+
+#             })
+
+
+
+#         # ==========================
+#         # DATA
+#         # ==========================
+
+#         elif product == "data":
+
+
+#             network = str(
+#                 request.data.get("network","")
+#             ).lower().strip()
+
+
+
+#             variation_code = str(
+#                 request.data.get(
+#                     "variation_code",
+#                     ""
+#                 )
+#             )
+
+
+
+#             service_id = VTU_SERVICE_MAP.get(
+#                 f"{network}-data"
+#             )
+
+
+#             if not service_id:
+
+#                 return Response(
+#                     {
+#                         "error":"Invalid data network"
+#                     },
+#                     status=400
+#                 )
+
+
+#             if not variation_code:
+
+#                 return Response(
+#                     {
+#                         "error":"variation_code required"
+#                     },
+#                     status=400
+#                 )
+
+
+
+#             try:
+
+#                 variation = VariationCode.objects.get(
+#                     variation_code=variation_code
+#                 )
+
+#                 variation_name = variation.name
+
+
+#             except VariationCode.DoesNotExist:
+
+#                 variation_name = "Data Bundle"
+
+
+
+#             service_name = (
+#                 f"{network.upper()} Data - {variation_name}"
+#             )
+
+
+
+#             payload.update({
+
+#                 "serviceID":service_id,
+
+#                 "billersCode":phone,
+
+#                 "variation_code":variation_code,
+
+#             })
+
+
+
+
+#         print("==========================")
+#         print("PAYLOAD:",payload)
+#         print("==========================")
+
+
+
+#         data, status_code = vtpass_post(
+#             "https://sandbox.vtpass.com/api/pay",
+#             payload
+#         )
+
+
+
+#         print("VTPASS RESPONSE:",data)
+
+
+
+#         if status_code != 200:
+
+#             return Response(
+#                 data,
+#                 status=status_code
+#             )
+
+
+
+#         if data.get("code") != "000":
+
+#             return Response(
+#                 data,
+#                 status=400
+#             )
+
+
+
+#         transaction_data = {}
+
+
+#         if isinstance(
+#             data.get("content"),
+#             dict
+#         ):
+
+#             transaction_data = (
+#                 data["content"]
+#                 .get(
+#                     "transactions",
+#                     {}
+#                 )
+#             )
+
+
+
+#         # Use VTpass product name
+
+#         if transaction_data.get("product_name"):
+
+#             service_name = transaction_data.get(
+#                 "product_name"
+#             )
+
+
+
+#         commission = Decimal(
+#             str(
+#                 transaction_data.get(
+#                     "commission",
+#                     0
+#                 )
+#             )
+#         )
+
+
+
+#         # ==========================
+#         # SAVE TRANSACTION
+#         # ==========================
+
+
+#         Transaction.objects.create(
+
+#             user=user,
+
+#             request_id=request_id,
+
+#             transaction_id=transaction_data.get(
+#                 "transactionId",
+#                 ""
+#             ),
+
+
+#             service=product,
+
+
+#             product_name=service_name,
+
+
+#             variation_code=variation_code,
+
+
+#             variation_name=variation_name,
+
+
+#             phone=phone,
+
+
+#             amount=amount,
+
+
+#             total_amount=amount,
+
+
+#             commission=commission,
+
+
+#             status=transaction_data.get(
+#                 "status",
+#                 "delivered"
+#             ),
+
+
+#         )
+
+
+
+#         # Deduct wallet
+
+#         wallet.amount -= amount
+
+
+#         wallet.save(
+#             update_fields=[
+#                 "amount"
+#             ]
+#         )
+
+
+
+#         return Response({
+
+#             "success":True,
+
+#             "product":product,
+
+#             "service_name":service_name,
+
+#             "variation_code":variation_code,
+
+#             "variation_name":variation_name,
+
+#             "request_id":request_id,
+
+#             "transaction_id":transaction_data.get(
+#                 "transactionId",
+#                 ""
+#             ),
+
+#             "amount":str(amount),
+
+#             "commission":str(commission),
+
+#             "new_balance":str(
+#                 wallet.amount
+#             )
+
+#         })
 from decimal import Decimal
 
 from django.db import transaction
@@ -699,51 +1134,35 @@ def buy_product(request):
 
 
     if not product:
-
         return Response(
-            {
-                "error": "Invalid product"
-            },
+            {"error": "Invalid product"},
             status=400
         )
 
 
     try:
-
         amount = Decimal(
-            str(
-                request.data.get("amount")
-            )
+            str(request.data.get("amount"))
         )
 
     except:
-
         return Response(
-            {
-                "error":"Invalid amount"
-            },
+            {"error": "Invalid amount"},
             status=400
         )
 
 
-
     phone = str(
-        request.data.get("phone","")
+        request.data.get("phone", "")
     ).strip()
 
 
-
     variation_code = ""
-
     variation_name = ""
-
     service_name = ""
 
 
-
     with transaction.atomic():
-
-
 
         wallet, _ = Wallet.objects.select_for_update().get_or_create(
             owner=user,
@@ -753,20 +1172,16 @@ def buy_product(request):
         )
 
 
-
         if wallet.amount < amount:
-
             return Response(
                 {
-                    "error":"Insufficient balance"
+                    "error": "Insufficient balance"
                 },
                 status=400
             )
 
 
-
         request_id = generate_request_id()
-
 
 
         payload = {
@@ -789,18 +1204,14 @@ def buy_product(request):
 
 
             network = str(
-                request.data.get("network","")
+                request.data.get("network", "")
             ).lower().strip()
 
 
-
-            service_id = VTU_SERVICE_MAP.get(
-                network
-            )
+            service_id = VTU_SERVICE_MAP.get(network)
 
 
             if not service_id:
-
                 return Response(
                     {
                         "error":"Invalid network"
@@ -809,16 +1220,15 @@ def buy_product(request):
                 )
 
 
-            service_name = (
-                f"{network.upper()} Airtime"
-            )
+            service_name = f"{network.upper()} Airtime"
 
 
             payload.update({
 
-                "serviceID":service_id
+                "serviceID": service_id
 
             })
+
 
 
 
@@ -843,7 +1253,6 @@ def buy_product(request):
             )
 
 
-
             service_id = VTU_SERVICE_MAP.get(
                 f"{network}-data"
             )
@@ -859,6 +1268,7 @@ def buy_product(request):
                 )
 
 
+
             if not variation_code:
 
                 return Response(
@@ -870,16 +1280,17 @@ def buy_product(request):
 
 
 
-            try:
+            variation = VariationCode.objects.filter(
+                variation_code=variation_code
+            ).first()
 
-                variation = VariationCode.objects.get(
-                    variation_code=variation_code
-                )
+
+
+            if variation:
 
                 variation_name = variation.name
 
-
-            except VariationCode.DoesNotExist:
+            else:
 
                 variation_name = "Data Bundle"
 
@@ -893,20 +1304,18 @@ def buy_product(request):
 
             payload.update({
 
-                "serviceID":service_id,
+                "serviceID": service_id,
 
-                "billersCode":phone,
+                "billersCode": phone,
 
-                "variation_code":variation_code,
+                "variation_code": variation_code,
 
             })
 
 
 
 
-        print("==========================")
-        print("PAYLOAD:",payload)
-        print("==========================")
+        print("PAYLOAD:", payload)
 
 
 
@@ -916,8 +1325,7 @@ def buy_product(request):
         )
 
 
-
-        print("VTPASS RESPONSE:",data)
+        print("VTPASS RESPONSE:", data)
 
 
 
@@ -942,22 +1350,14 @@ def buy_product(request):
         transaction_data = {}
 
 
-        if isinstance(
-            data.get("content"),
-            dict
-        ):
+        if isinstance(data.get("content"), dict):
 
-            transaction_data = (
-                data["content"]
-                .get(
-                    "transactions",
-                    {}
-                )
+            transaction_data = data["content"].get(
+                "transactions",
+                {}
             )
 
 
-
-        # Use VTpass product name
 
         if transaction_data.get("product_name"):
 
@@ -982,7 +1382,6 @@ def buy_product(request):
         # SAVE TRANSACTION
         # ==========================
 
-
         Transaction.objects.create(
 
             user=user,
@@ -1001,8 +1400,9 @@ def buy_product(request):
             product_name=service_name,
 
 
-            variation_code=variation_code,
+            # KEEP VARIATION DATA
 
+            variation_code=variation_code,
 
             variation_name=variation_name,
 
@@ -1024,12 +1424,9 @@ def buy_product(request):
                 "delivered"
             ),
 
-
         )
 
 
-
-        # Deduct wallet
 
         wallet.amount -= amount
 
@@ -1044,30 +1441,28 @@ def buy_product(request):
 
         return Response({
 
-            "success":True,
+            "success": True,
 
-            "product":product,
+            "product": product,
 
-            "service_name":service_name,
+            "service_name": service_name,
 
-            "variation_code":variation_code,
+            "variation_code": variation_code,
 
-            "variation_name":variation_name,
+            "variation_name": variation_name,
 
-            "request_id":request_id,
+            "request_id": request_id,
 
-            "transaction_id":transaction_data.get(
+            "transaction_id": transaction_data.get(
                 "transactionId",
                 ""
             ),
 
-            "amount":str(amount),
+            "amount": str(amount),
 
-            "commission":str(commission),
+            "commission": str(commission),
 
-            "new_balance":str(
-                wallet.amount
-            )
+            "new_balance": str(wallet.amount)
 
         })
 from decimal import Decimal

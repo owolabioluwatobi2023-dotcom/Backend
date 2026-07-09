@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Wallet, Transaction, VariationCode
+from .models import Wallet, Transaction
 
 
 # =========================
@@ -57,6 +57,7 @@ class TransactionAdmin(admin.ModelAdmin):
         "transaction_id",
         "variation_code",
         "variation_name",
+        "reference",
     )
 
 
@@ -80,45 +81,87 @@ class TransactionAdmin(admin.ModelAdmin):
     )
 
 
+    fieldsets = (
+
+        (
+            "User Information",
+            {
+                "fields": (
+                    "user",
+                    "email",
+                    "phone",
+                )
+            },
+        ),
+
+
+        (
+            "Product Information",
+            {
+                "fields": (
+                    "service",
+                    "product_name",
+                    "variation_code",
+                    "variation_name",
+                )
+            },
+        ),
+
+
+        (
+            "Payment Information",
+            {
+                "fields": (
+                    "amount",
+                    "total_amount",
+                    "profit",
+                    "commission",
+                    "initial_balance",
+                    "final_balance",
+                )
+            },
+        ),
+
+
+        (
+            "Transaction Status",
+            {
+                "fields": (
+                    "status",
+                    "response_code",
+                    "response_description",
+                )
+            },
+        ),
+
+
+        (
+            "VTpass Information",
+            {
+                "fields": (
+                    "transaction_id",
+                    "request_id",
+                    "unique_element",
+                    "purchased_code",
+                    "wallet_credit_id",
+                )
+            },
+        ),
+
+
+        (
+            "Dates",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+
+    )
+
+
     ordering = (
         "-created_at",
-    )
-
-
-
-# =========================
-# VARIATION ADMIN
-# =========================
-
-@admin.register(VariationCode)
-class VariationCodeAdmin(admin.ModelAdmin):
-
-    list_display = (
-        "service",
-        "variation_code",
-        "name",
-        "amount",
-        "fixed_price",
-        "active",
-        "created_at",
-    )
-
-
-    search_fields = (
-        "service",
-        "variation_code",
-        "name",
-    )
-
-
-    list_filter = (
-        "service",
-        "active",
-        "fixed_price",
-    )
-
-
-    ordering = (
-        "service",
-        "amount",
     )
