@@ -29,172 +29,84 @@ class WalletAdmin(admin.ModelAdmin):
 # =========================
 # TRANSACTION ADMIN
 # =========================
-
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
 
     list_display = (
-
         "id",
-
         "user",
-
         "product_name",
-
         "phone",
-
         "amount",
-
+        "profit",
+        "commission",
         "status",
-
-        "request_id",
-
-        "transaction_id",
-
         "created_at",
-
     )
-
-
-    search_fields = (
-
-        "request_id",
-
-        "transaction_id",
-
-        "reference",
-
-        "product_name",
-
-        "phone",
-
-        "user__username",
-
-        "user__email",
-
-    )
-
-
-    list_filter = (
-
-        "status",
-
-        "product_name",
-
-        "created_at",
-
-    )
-
-
-    ordering = (
-
-        "-created_at",
-
-    )
-
 
     readonly_fields = (
-
         "request_id",
-
         "transaction_id",
-
         "created_at",
-
         "updated_at",
-
+        "profit",
     )
 
-
     fieldsets = (
-
         (
             "Transaction Information",
             {
                 "fields": (
-
                     "user",
-
                     "product_name",
-
                     "phone",
-
                     "email",
-
                     "status",
-
                 )
-            }
+            },
         ),
-
-
-        (
-            "Identifiers",
-            {
-                "fields": (
-
-                    "request_id",
-
-                    "transaction_id",
-
-                    "reference",
-
-                )
-            }
-        ),
-
-
         (
             "Money",
             {
                 "fields": (
-
                     "amount",
-
-                    "total_amount",
-
+                    "profit",
                     "commission",
-
+                    "total_amount",
                 )
-            }
+            },
         ),
-
-
+        (
+            "Identifiers",
+            {
+                "fields": (
+                    "request_id",
+                    "transaction_id",
+                    "reference",
+                )
+            },
+        ),
         (
             "VTpass Response",
             {
                 "fields": (
-
                     "response_code",
-
                     "response_description",
-
                     "purchased_code",
-
                     "unique_element",
-
                 )
-            }
+            },
         ),
-
-
         (
             "Dates",
             {
                 "fields": (
-
                     "created_at",
-
                     "updated_at",
-
                 )
-            }
+            },
         ),
-
     )
-
-
-
 
 # =========================
 # VARIATION CODE ADMIN
