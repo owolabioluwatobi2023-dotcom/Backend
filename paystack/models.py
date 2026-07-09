@@ -202,31 +202,20 @@ class Wallet(models.Model):
 # =========================
 
 class Transaction(models.Model):
-
-
+    
     STATUS_CHOICES = (
-
         ("pending", "Pending"),
-
         ("processing", "Processing"),
-
         ("delivered", "Delivered"),
-
         ("failed", "Failed"),
-
         ("reversed", "Reversed"),
-
     )
-
-
 
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name="transactions"
     )
-
-
 
     # Paystack reference
     reference = models.CharField(
@@ -235,8 +224,6 @@ class Transaction(models.Model):
         null=True,
         db_index=True
     )
-
-
 
     # VTpass request ID
     request_id = models.CharField(
@@ -247,8 +234,6 @@ class Transaction(models.Model):
         db_index=True
     )
 
-
-
     # VTpass transaction ID
     transaction_id = models.CharField(
         max_length=100,
@@ -256,18 +241,12 @@ class Transaction(models.Model):
         default=""
     )
 
-
-
-    # Example:
-    # MTN Data - 1GB
-    # GLO Airtime VTU
+    # MTN Data - 4.5GB (30 Days)
     product_name = models.CharField(
         max_length=200,
         blank=True,
         default=""
     )
-
-
 
     unique_element = models.CharField(
         max_length=100,
@@ -275,46 +254,44 @@ class Transaction(models.Model):
         default=""
     )
 
-
-
     phone = models.CharField(
         max_length=20,
         blank=True,
         default=""
     )
 
-
-
     email = models.EmailField(
         blank=True,
         null=True
     )
 
-
-
+    # Customer paid
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
     )
 
-
-
+    # Final amount charged
     total_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
     )
 
-
-
-    commission = models.DecimalField(
+    # Your profit/gain
+    profit = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
     )
 
-
+    # VTpass commission
+    commission = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
 
     response_code = models.CharField(
         max_length=10,
@@ -322,22 +299,16 @@ class Transaction(models.Model):
         default=""
     )
 
-
-
     response_description = models.CharField(
         max_length=255,
         blank=True,
         default=""
     )
 
-
-
     purchased_code = models.TextField(
         blank=True,
         default=""
     )
-
-
 
     wallet_credit_id = models.CharField(
         max_length=100,
@@ -345,13 +316,9 @@ class Transaction(models.Model):
         default=""
     )
 
-
-
     reversed = models.BooleanField(
         default=False
     )
-
-
 
     status = models.CharField(
         max_length=30,
@@ -360,27 +327,17 @@ class Transaction(models.Model):
         db_index=True
     )
 
-
-
     created_at = models.DateTimeField(
         auto_now_add=True
     )
-
 
     updated_at = models.DateTimeField(
         auto_now=True
     )
 
 
-
     def __str__(self):
-
         return f"{self.product_name} - {self.status}"
-
-
-
-
-
 # =========================
 # DATA VARIATIONS
 # =========================
