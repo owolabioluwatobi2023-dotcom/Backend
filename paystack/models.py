@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from decimal import Decimal
+...
 
 
 # class Wallet(models.Model):
@@ -164,6 +166,10 @@ from django.contrib.auth.models import User
 # WALLET
 # =========================
 
+# =========================
+# WALLET
+# =========================
+
 class Wallet(models.Model):
 
     owner = models.OneToOneField(
@@ -172,29 +178,22 @@ class Wallet(models.Model):
         related_name="wallet"
     )
 
-
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
     )
 
-
     created_at = models.DateTimeField(
         auto_now_add=True
     )
-
 
     updated_at = models.DateTimeField(
         auto_now=True
     )
 
-
     def __str__(self):
-
         return f"{self.owner.username} - ₦{self.amount}"
-
-
 
 
 # =========================
@@ -202,7 +201,7 @@ class Wallet(models.Model):
 # =========================
 
 class Transaction(models.Model):
-    
+
     STATUS_CHOICES = (
         ("pending", "Pending"),
         ("processing", "Processing"),
@@ -217,7 +216,7 @@ class Transaction(models.Model):
         related_name="transactions"
     )
 
-    # Paystack reference
+    # Paystack
     reference = models.CharField(
         max_length=100,
         blank=True,
@@ -225,7 +224,7 @@ class Transaction(models.Model):
         db_index=True
     )
 
-    # VTpass request ID
+    # VTpass
     request_id = models.CharField(
         max_length=100,
         unique=True,
@@ -234,22 +233,35 @@ class Transaction(models.Model):
         db_index=True
     )
 
-    # VTpass transaction ID
     transaction_id = models.CharField(
         max_length=100,
         blank=True,
         default=""
     )
 
-    # MTN Data - 4.5GB (30 Days)
-    product_name = models.CharField(
-        max_length=200,
+    # Service
+    service = models.CharField(
+        max_length=100,
         blank=True,
         default=""
     )
 
-    unique_element = models.CharField(
+    # Product
+    product_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default=""
+    )
+
+    # Purchased variation snapshot
+    variation_code = models.CharField(
         max_length=100,
+        blank=True,
+        default=""
+    )
+
+    variation_name = models.CharField(
+        max_length=255,
         blank=True,
         default=""
     )
@@ -265,36 +277,52 @@ class Transaction(models.Model):
         null=True
     )
 
-    # Customer paid
+    unique_element = models.CharField(
+        max_length=100,
+        blank=True,
+        default=""
+    )
+
+    # Amounts
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
     )
 
-    # Final amount charged
     total_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
     )
 
-    # Your profit/gain
     profit = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
     )
 
-    # VTpass commission
     commission = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
     )
 
+    # Wallet snapshot
+    initial_balance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    final_balance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
     response_code = models.CharField(
-        max_length=10,
+        max_length=20,
         blank=True,
         default=""
     )
@@ -335,59 +363,49 @@ class Transaction(models.Model):
         auto_now=True
     )
 
-
     def __str__(self):
-        return f"{self.product_name} - {self.status}"
+        return f"{self.user.username} - {self.variation_name or self.product_name}"
+
+
 # =========================
 # DATA VARIATIONS
 # =========================
 
 class VariationCode(models.Model):
 
-
-    service_id = models.CharField(
+    service = models.CharField(
         max_length=100
     )
-
 
     variation_code = models.CharField(
         max_length=100,
         unique=True
     )
 
-
     name = models.CharField(
         max_length=255
     )
-
 
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2
     )
 
-
     fixed_price = models.BooleanField(
         default=True
     )
-
 
     active = models.BooleanField(
         default=True
     )
 
-
     created_at = models.DateTimeField(
         auto_now_add=True
     )
-
 
     updated_at = models.DateTimeField(
         auto_now=True
     )
 
-
-
     def __str__(self):
-
-        return f"{self.service_id} - {self.name}"
+        return f"{self.service} - {self.name}"

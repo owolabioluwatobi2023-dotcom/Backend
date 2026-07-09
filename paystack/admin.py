@@ -25,31 +25,57 @@ class WalletAdmin(admin.ModelAdmin):
     )
 
 
-
 # =========================
 # TRANSACTION ADMIN
 # =========================
+
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
 
     list_display = (
         "id",
         "user",
+        "service",
         "product_name",
+        "variation_name",
         "phone",
         "amount",
         "profit",
         "commission",
+        "total_amount",
         "status",
         "created_at",
+    )
+
+    search_fields = (
+        "user__username",
+        "phone",
+        "request_id",
+        "transaction_id",
+        "variation_name",
+        "variation_code",
+    )
+
+    list_filter = (
+        "service",
+        "status",
+        "created_at",
+    )
+
+    ordering = (
+        "-created_at",
     )
 
     readonly_fields = (
         "request_id",
         "transaction_id",
+        "reference",
+        "profit",
+        "commission",
+        "initial_balance",
+        "final_balance",
         "created_at",
         "updated_at",
-        "profit",
     )
 
     fieldsets = (
@@ -58,7 +84,10 @@ class TransactionAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "user",
+                    "service",
                     "product_name",
+                    "variation_code",
+                    "variation_name",
                     "phone",
                     "email",
                     "status",
@@ -73,6 +102,8 @@ class TransactionAdmin(admin.ModelAdmin):
                     "profit",
                     "commission",
                     "total_amount",
+                    "initial_balance",
+                    "final_balance",
                 )
             },
         ),
@@ -93,6 +124,7 @@ class TransactionAdmin(admin.ModelAdmin):
                     "response_code",
                     "response_description",
                     "purchased_code",
+                    "wallet_credit_id",
                     "unique_element",
                 )
             },
@@ -108,6 +140,7 @@ class TransactionAdmin(admin.ModelAdmin):
         ),
     )
 
+
 # =========================
 # VARIATION CODE ADMIN
 # =========================
@@ -116,44 +149,27 @@ class TransactionAdmin(admin.ModelAdmin):
 class VariationCodeAdmin(admin.ModelAdmin):
 
     list_display = (
-
-        "service_id",
-
+        "service",
         "variation_code",
-
         "name",
-
         "amount",
-
+        "fixed_price",
         "active",
-
     )
-
 
     search_fields = (
-
-        "service_id",
-
+        "service",
         "variation_code",
-
         "name",
-
     )
-
 
     list_filter = (
-
+        "service",
         "active",
-
         "fixed_price",
-
     )
 
-
     ordering = (
-
-        "service_id",
-
+        "service",
         "amount",
-
     )
