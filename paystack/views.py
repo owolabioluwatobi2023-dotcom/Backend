@@ -1373,6 +1373,188 @@ def vtpass_get(url, params=None):
 
 
 
+# from decimal import Decimal
+# from django.db import transaction
+# from rest_framework.decorators import api_view, permission_classes
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework.response import Response
+
+# # ======================================================
+# # 🔥 PRODUCT MAPPING (YOUR SYSTEM LOGIC)
+# # ======================================================
+
+# PRODUCT_MAP = {
+#     "product_1": "airtime",
+#     "product_2": "data",
+#     "product_3": "cabletv",
+# }
+
+# # ======================================================
+# # 🔥 VTU SERVICE MAP (VTpass REQUIREMENTS)
+# # ======================================================
+
+# VTU_SERVICE_MAP = {
+#     # AIRTIME
+#     "mtn": "mtn",
+#     "airtel": "airtel",
+#     "glo": "glo",
+#     "9mobile": "etisalat",
+#     "intl": "intl",
+
+#     # DATA
+#     "mtn-data": "mtn",
+#     "airtel-data": "airtel",
+#     "glo-data": "glo",
+#     "glo-sme": "glo-sme-data",
+#     "9mobile-data": "etisalat",
+#     "smile": "smile-direct",
+#     "spectranet": "spectranet",
+
+#     # CABLE TV (VTpass expects service IDs like)
+#     "dstv": "dstv",
+#     "gotv": "gotv",
+#     "startimes": "startimes",
+# }
+
+# # ======================================================
+# # 🔥 MAIN PURCHASE API
+# # ======================================================
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def buy_product(request):
+
+#     user = request.user
+
+#     product_key = str(request.data.get("product", "")).lower().strip()
+#     product = PRODUCT_MAP.get(product_key)
+
+#     if not product:
+#         return Response({: "Invalid product (use product_1, product_2, product_3)"}, status=400)
+
+#     try:
+#         amount = Decimal(str(request.data.get("amount")))
+#     except:
+#         return Response({"error": "Invalid amount"}, status=400)
+
+#     if amount <= 0:
+#         return Response({"error": "Amount must be greater than zero"}, status=400)
+
+#     phone = request.data.get("phone")
+
+#     with transaction.atomic():
+
+#         wallet, _ = Wallet.objects.select_for_update().get_or_create(
+#             owner=user,
+#             defaults={"amount": Decimal("0.00")}
+#         )
+
+#         if wallet.amount < amount:
+#             return Response({"Insufficient balance"}, status=400)
+
+#         request_id = generate_request_id()
+
+#         payload = {
+#             "request_id": request_id,
+#             "amount": str(amount),
+#             "phone": phone,
+#         }
+
+#         # ======================================================
+#         # 🔥 PRODUCT 1: AIRTIME
+#         # ======================================================
+#         if product == "airtime":
+
+#             network = request.data.get("network")
+#             serviceID = VTU_SERVICE_MAP.get(network)
+
+#             if not serviceID:
+#                 return Response({ "Invalid network"}, status=400)
+
+#             payload.update({
+#                 "serviceID": serviceID,
+#             })
+
+#         # ======================================================
+#         # 🔥 PRODUCT 2: DATA
+#         # ======================================================
+#         elif product == "data":
+
+#             network = request.data.get("network")
+#             serviceID = VTU_SERVICE_MAP.get(f"{network}-data")
+
+#             variation_code = request.data.get("variation_code")
+
+#             if not serviceID:
+#                 return Response({"Invalid data network"}, status=400)
+
+#             if not variation_code:
+#                 return Response({"variation_code required"}, status=400)
+
+#             payload.update({
+#                 "serviceID": serviceID,
+#                 "billersCode": phone,
+#                 "variation_code": variation_code,
+#             }
+#             )
+
+#         # ======================================================
+#         # 🔥 PRODUCT 3: CABLE TV
+#         # ======================================================
+#         elif product == "cabletv":
+
+#             serviceID = VTU_SERVICE_MAP.get(request.data.get("serviceID"))
+
+#             if not serviceID:
+#                 return Response({"error": "Invalid cable service"}, status=400)
+
+#             payload.update({
+#                 "serviceID": serviceID,
+#                 "billersCode": request.data.get("smartcard_number"),
+#                 "variation_code": request.data.get("variation_code"),
+#             })
+
+#         # ======================================================
+#         # 🔥 CALL VTpass
+#         # ======================================================
+#         data, status_code = vtpass_post(
+#             "https://sandbox.vtpass.com/api/pay",
+#             payload
+#         )
+
+#         if status_code != 200:
+#             return Response(data, status=status_code)
+
+#         # ======================================================
+#         # SAVE TRANSACTION
+#         # ======================================================
+#         Transaction.objects.create(
+#             user=user,
+#             request_id=request_id,
+#             transaction_id="",
+#             product_name=product,
+#             phone=phone,
+#             amount=amount,
+#             total_amount=amount,
+#             status="Delivery",
+#         )
+
+#         # ======================================================
+#         # DEBIT WALLET
+#         # ======================================================
+#         wallet.amount -= amount
+#         wallet.save(update_fields=["amount"])
+
+#         return Response({
+#             "success": True,
+#             "product": product,
+#             "request_id": request_id,
+#             "amount": str(amount),
+#             "new_balance": str(wallet.amount),
+#             "api_response": data,
+#         })
+
+
 from decimal import Decimal
 from django.db import transaction
 from rest_framework.decorators import api_view, permission_classes
@@ -1380,7 +1562,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 # ======================================================
-# 🔥 PRODUCT MAPPING (YOUR SYSTEM LOGIC)
+# PRODUCT MAPPING
 # ======================================================
 
 PRODUCT_MAP = {
@@ -1390,67 +1572,72 @@ PRODUCT_MAP = {
 }
 
 # ======================================================
-# 🔥 VTU SERVICE MAP (VTpass REQUIREMENTS)
+# VTpass SERVICE MAP
 # ======================================================
 
 VTU_SERVICE_MAP = {
-    # AIRTIME
+    # Airtime
     "mtn": "mtn",
     "airtel": "airtel",
     "glo": "glo",
     "9mobile": "etisalat",
     "intl": "intl",
 
-    # DATA
+    # Data
     "mtn-data": "mtn",
     "airtel-data": "airtel",
     "glo-data": "glo",
-    "glo-sme": "glo-sme-data",
+    "glo-sme-data": "glo-sme-data",
     "9mobile-data": "etisalat",
-    "smile": "smile-direct",
-    "spectranet": "spectranet",
+    "smile-data": "smile-direct",
+    "spectranet-data": "spectranet",
 
-    # CABLE TV (VTpass expects service IDs like)
+    # Cable TV
     "dstv": "dstv",
     "gotv": "gotv",
     "startimes": "startimes",
 }
 
-# ======================================================
-# 🔥 MAIN PURCHASE API
-# ======================================================
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def buy_product(request):
-
     user = request.user
 
     product_key = str(request.data.get("product", "")).lower().strip()
     product = PRODUCT_MAP.get(product_key)
 
     if not product:
-        return Response({"error": "Invalid product (use product_1, product_2, product_3)"}, status=400)
+        return Response(
+            {"error": "Invalid product (use product_1, product_2, product_3)"},
+            status=400,
+        )
 
     try:
         amount = Decimal(str(request.data.get("amount")))
-    except:
+    except Exception:
         return Response({"error": "Invalid amount"}, status=400)
 
     if amount <= 0:
-        return Response({"error": "Amount must be greater than zero"}, status=400)
+        return Response(
+            {"error": "Amount must be greater than zero"},
+            status=400,
+        )
 
-    phone = request.data.get("phone")
+    phone = str(request.data.get("phone", "")).strip()
 
     with transaction.atomic():
 
         wallet, _ = Wallet.objects.select_for_update().get_or_create(
             owner=user,
-            defaults={"amount": Decimal("0.00")}
+            defaults={"amount": Decimal("0.00")},
         )
 
         if wallet.amount < amount:
-            return Response({"error": "Insufficient balance"}, status=400)
+            return Response(
+                {"error": "Insufficient balance"},
+                status=400,
+            )
 
         request_id = generate_request_id()
 
@@ -1461,86 +1648,134 @@ def buy_product(request):
         }
 
         # ======================================================
-        # 🔥 PRODUCT 1: AIRTIME
+        # AIRTIME
         # ======================================================
+
         if product == "airtime":
 
-            network = request.data.get("network")
-            serviceID = VTU_SERVICE_MAP.get(network)
+            network = str(request.data.get("network", "")).lower().strip()
 
-            if not serviceID:
-                return Response({"error": "Invalid network"}, status=400)
+            service_id = VTU_SERVICE_MAP.get(network)
+
+            if not service_id:
+                return Response(
+                    {"error": "Invalid network"},
+                    status=400,
+                )
 
             payload.update({
-                "serviceID": serviceID,
+                "serviceID": service_id,
             })
 
         # ======================================================
-        # 🔥 PRODUCT 2: DATA
+        # DATA
         # ======================================================
+
         elif product == "data":
 
-            network = request.data.get("network")
-            serviceID = VTU_SERVICE_MAP.get(f"{network}-data")
-
+            network = str(request.data.get("network", "")).lower().strip()
             variation_code = request.data.get("variation_code")
 
-            if not serviceID:
-                return Response({"error": "Invalid data network"}, status=400)
+            service_id = VTU_SERVICE_MAP.get(f"{network}-data")
+
+            if not service_id:
+                return Response(
+                    {"error": "Invalid data network"},
+                    status=400,
+                )
 
             if not variation_code:
-                return Response({"error": "variation_code required"}, status=400)
+                return Response(
+                    {"error": "variation_code is required"},
+                    status=400,
+                )
 
             payload.update({
-                "serviceID": serviceID,
+                "serviceID": service_id,
                 "billersCode": phone,
                 "variation_code": variation_code,
             })
 
         # ======================================================
-        # 🔥 PRODUCT 3: CABLE TV
+        # CABLE TV
         # ======================================================
+
         elif product == "cabletv":
 
-            serviceID = VTU_SERVICE_MAP.get(request.data.get("serviceID"))
+            service = str(request.data.get("serviceID", "")).lower().strip()
 
-            if not serviceID:
-                return Response({"error": "Invalid cable service"}, status=400)
+            service_id = VTU_SERVICE_MAP.get(service)
+
+            if not service_id:
+                return Response(
+                    {"error": "Invalid cable service"},
+                    status=400,
+                )
+
+            smartcard = request.data.get("smartcard_number")
+            variation_code = request.data.get("variation_code")
+
+            if not smartcard:
+                return Response(
+                    {"error": "smartcard_number is required"},
+                    status=400,
+                )
+
+            if not variation_code:
+                return Response(
+                    {"error": "variation_code is required"},
+                    status=400,
+                )
 
             payload.update({
-                "serviceID": serviceID,
-                "billersCode": request.data.get("smartcard_number"),
-                "variation_code": request.data.get("variation_code"),
+                "serviceID": service_id,
+                "billersCode": smartcard,
+                "variation_code": variation_code,
             })
 
         # ======================================================
-        # 🔥 CALL VTpass
+        # DEBUG LOGS
         # ======================================================
+
+        print("=" * 60)
+        print("PRODUCT:", product)
+        print("REQUEST BODY:", request.data)
+        print("PAYLOAD:", payload)
+        print("=" * 60)
+
+        # ======================================================
+        # CALL VTPASS
+        # ======================================================
+
         data, status_code = vtpass_post(
             "https://sandbox.vtpass.com/api/pay",
-            payload
+            payload,
         )
+
+        print("VTPASS RESPONSE:", data)
 
         if status_code != 200:
             return Response(data, status=status_code)
 
-        # ======================================================
-        # SAVE TRANSACTION
-        # ======================================================
+        if data.get("code") != "000":
+            return Response(data, status=400)
+
+        transaction_data = {}
+
+        if isinstance(data.get("content"), dict):
+            transaction_data = data["content"].get("transactions", {})
+
         Transaction.objects.create(
             user=user,
             request_id=request_id,
-            transaction_id="",
+            transaction_id=transaction_data.get("transactionId", ""),
             product_name=product,
             phone=phone,
             amount=amount,
             total_amount=amount,
-            status="pending",
+            status="Delivery",
         )
 
-        # ======================================================
-        # DEBIT WALLET
-        # ======================================================
         wallet.amount -= amount
         wallet.save(update_fields=["amount"])
 
@@ -1552,8 +1787,6 @@ def buy_product(request):
             "new_balance": str(wallet.amount),
             "api_response": data,
         })
-
-
 
 # @api_view(["POST"])
 # @permission_classes([IsAuthenticated])
