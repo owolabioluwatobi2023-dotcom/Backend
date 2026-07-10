@@ -1342,6 +1342,43 @@ def vtpass_get(url, params=None):
 #             "commission": str(commission),
 #             "new_balance": str(wallet.amount),
 #         })
+
+
+# ======================================================
+# PRODUCT MAPPING
+# ======================================================
+
+PRODUCT_MAP = {
+    "product_1": "airtime",
+    "product_2": "data",
+    "product_3": "cabletv",
+}
+
+
+
+# ======================================================
+# VTpass SERVICE MAP
+# ======================================================
+
+VTU_SERVICE_MAP = {
+
+    "mtn": "mtn",
+    "airtel": "airtel",
+    "glo": "glo",
+    "9mobile": "etisalat",
+
+    "mtn-data": "mtn-data",
+    "airtel-data": "airtel-data",
+    "glo-data": "glo-data",
+    "9mobile-data": "etisalat-data",
+
+    "dstv": "dstv",
+    "gotv": "gotv",
+    "startimes": "startimes",
+
+}
+
+
 from decimal import Decimal
 import traceback
 
