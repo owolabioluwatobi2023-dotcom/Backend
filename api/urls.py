@@ -110,6 +110,7 @@
 
 from django.urls import path
 from django.http import HttpResponse
+from .views import app_stats
 
 from .views import (
 
@@ -126,6 +127,7 @@ from .views import (
     initialize_payment,
     paystack_balance,
     service_variations,
+    app_stats
    
    
     
@@ -160,7 +162,7 @@ urlpatterns = [
     
 
     path('service-variations/', service_variations, name='service-variations'),
-    
+    path("app-stats/", app_stats, name="app_stats"),
        
 
   
