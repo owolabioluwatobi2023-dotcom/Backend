@@ -1347,12 +1347,34 @@ def vtpass_get(url, params=None):
 # ======================================================
 # PRODUCT MAPPING
 # ======================================================
+from decimal import Decimal
+import traceback
+
+from django.db import transaction
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import Wallet, Transaction, VariationCode
+
+
+
+# ======================================================
+# PRODUCT MAP
+# ======================================================
 
 PRODUCT_MAP = {
+
     "product_1": "airtime",
+
     "product_2": "data",
+
     "product_3": "cabletv",
+
 }
+
+
 
 
 
@@ -1367,10 +1389,12 @@ VTU_SERVICE_MAP = {
     "glo": "glo",
     "9mobile": "etisalat",
 
+
     "mtn-data": "mtn-data",
     "airtel-data": "airtel-data",
     "glo-data": "glo-data",
     "9mobile-data": "etisalat-data",
+
 
     "dstv": "dstv",
     "gotv": "gotv",
@@ -1379,16 +1403,13 @@ VTU_SERVICE_MAP = {
 }
 
 
-from decimal import Decimal
-import traceback
 
-from django.db import transaction
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
-from .models import Wallet, Transaction, VariationCode
+
+# ======================================================
+# BUY PRODUCT
+# ======================================================
 
 
 @api_view(["POST"])
@@ -1402,71 +1423,105 @@ def buy_product(request):
         print("DATA:", request.data)
 
 
+
         user = request.user
 
 
+
         product_key = str(
-            request.data.get("product", "")
+            request.data.get("product","")
         ).lower().strip()
 
 
-        product = PRODUCT_MAP.get(product_key)
+
+        product = PRODUCT_MAP.get(
+            product_key
+        )
+
 
 
         if not product:
+
             return Response(
                 {
-                    "Invalid product"
+                    "error":"Invalid product"
                 },
                 status=400
             )
+
+
+
 
 
         try:
+
             amount = Decimal(
-                str(request.data.get("amount"))
+                str(
+                    request.data.get("amount")
+                )
             )
 
-        except Exception:
+
+        except:
+
             return Response(
                 {
-                     "Invalid amount"
+                    "error":"Invalid amount"
                 },
                 status=400
             )
+
+
+
 
 
         phone = str(
-            request.data.get("phone", "")
+            request.data.get("phone","")
         ).strip()
 
 
+
         if not phone:
+
             return Response(
                 {
-                     "Phone required"
+                    "error":"Phone required"
                 },
                 status=400
             )
+
+
 
 
 
         variation = None
+
         variation_code = ""
+
         variation_name = ""
+
         service_name = ""
+
+
+
 
 
 
         with transaction.atomic():
 
 
+
             wallet, created = Wallet.objects.select_for_update().get_or_create(
+
                 owner=user,
+
                 defaults={
-                    "amount": Decimal("0.00")
+                    "amount":Decimal("0.00")
                 }
+
             )
+
+
 
 
 
@@ -1474,10 +1529,14 @@ def buy_product(request):
 
                 return Response(
                     {
-                         "Insufficient balance"
+                        "error":"Insufficient balance"
                     },
                     status=400
                 )
+
+
+
+
 
 
 
@@ -1485,11 +1544,20 @@ def buy_product(request):
 
 
 
+
+
             payload = {
-                "request_id": request_id,
-                "amount": str(amount),
-                "phone": phone,
+
+                "request_id":request_id,
+
+                "amount":str(amount),
+
+                "phone":phone,
+
             }
+
+
+
 
 
 
@@ -1498,15 +1566,20 @@ def buy_product(request):
             # AIRTIME
             # ==========================
 
+
             if product == "airtime":
 
 
+
                 network = str(
-                    request.data.get("network", "")
+                    request.data.get("network","")
                 ).lower().strip()
 
 
-                service_id = VTU_SERVICE_MAP.get(network)
+
+                service_id = VTU_SERVICE_MAP.get(
+                    network
+                )
 
 
 
@@ -1514,18 +1587,25 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error": "Invalid network"
+                            "error":"Invalid network"
                         },
                         status=400
                     )
 
 
+
                 service_name = (
-                    f"{network.upper()} Airtime"
+                    network.upper()
+                    +
+                    " Airtime"
                 )
 
 
+
                 payload["serviceID"] = service_id
+
+
+
 
 
 
@@ -1534,17 +1614,25 @@ def buy_product(request):
             # DATA
             # ==========================
 
+
             elif product == "data":
 
 
+
                 network = str(
-                    request.data.get("network", "")
+                    request.data.get("network","")
                 ).lower().strip()
 
 
+
                 variation_code = str(
-                    request.data.get("variation_code", "")
+                    request.data.get(
+                        "variation_code",
+                        ""
+                    )
                 ).strip()
+
+
 
 
 
@@ -1552,6 +1640,7 @@ def buy_product(request):
 
                     return Response(
                         {
+                            "error":
                             "variation_code required"
                         },
                         status=400
@@ -1559,9 +1648,17 @@ def buy_product(request):
 
 
 
+
+
+
                 service_id = VTU_SERVICE_MAP.get(
+
                     f"{network}-data"
+
                 )
+
+
+
 
 
 
@@ -1569,6 +1666,7 @@ def buy_product(request):
 
                     return Response(
                         {
+                            "error":
                             "Invalid data network"
                         },
                         status=400
@@ -1576,37 +1674,63 @@ def buy_product(request):
 
 
 
+
+
+
+
                 variation = VariationCode.objects.filter(
+
                     variation_code=variation_code
+
                 ).first()
 
 
 
-                if variation:
 
-                    variation_name = variation.name
 
-                else:
 
-                    variation_name = "Data Bundle"
+                variation_name = (
+
+                    variation.name
+
+                    if variation
+
+                    else
+
+                    "Data Bundle"
+
+                )
+
+
+
 
 
 
                 service_name = (
+
                     f"{network.upper()} Data - {variation_name}"
+
                 )
+
+
+
 
 
 
                 payload.update({
 
-                    "serviceID": service_id,
+                    "serviceID":service_id,
 
-                    "billersCode": phone,
+                    "billersCode":phone,
 
-                    "variation_code": variation_code,
+                    "variation_code":variation_code
 
                 })
+
+
+
+
+
 
 
 
@@ -1615,7 +1739,7 @@ def buy_product(request):
             # CABLE TV
             # ==========================
 
-            
+
             elif product == "cabletv":
 
 
@@ -1633,9 +1757,12 @@ def buy_product(request):
 
 
 
+
                 service_id = VTU_SERVICE_MAP.get(
                     provider
                 )
+
+
 
 
 
@@ -1649,6 +1776,7 @@ def buy_product(request):
                         },
                         status=400
                     )
+
 
 
 
@@ -1695,15 +1823,11 @@ def buy_product(request):
 
                 service_name = (
 
-                    provider.upper()
-
-                    +
-                    " - "
-
-                    +
-                    variation_name
+                    f"{provider.upper()} - {variation_name}"
 
                 )
+
+
 
 
 
@@ -1711,6 +1835,8 @@ def buy_product(request):
                 decoder = request.data.get(
                     "decoder_number"
                 )
+
+
 
 
 
@@ -1723,6 +1849,7 @@ def buy_product(request):
                         },
                         status=400
                     )
+
 
 
 
@@ -1743,18 +1870,25 @@ def buy_product(request):
 
 
 
-            else:
 
+            else:
 
                 return Response(
                     {
-                        
+                        "error":
                         "Unsupported product"
                     },
                     status=400
                 )
 
 
+
+
+
+
+
+
+            print("VTPASS PAYLOAD:",payload)
 
 
 
@@ -1773,12 +1907,21 @@ def buy_product(request):
 
 
 
+            print("VTPASS RESPONSE:",data)
+
+
+
+
+
+
+
             if status_code != 200:
 
                 return Response(
                     data,
                     status=status_code
                 )
+
 
 
 
@@ -1797,7 +1940,9 @@ def buy_product(request):
 
 
 
-            transaction_content = {}
+
+            # FIXED VARIABLE HERE
+            transaction_data = {}
 
 
 
@@ -1806,7 +1951,8 @@ def buy_product(request):
                 dict
             ):
 
-                transaction_content = (
+
+                transaction_data = (
 
                     data["content"]
 
@@ -1821,13 +1967,16 @@ def buy_product(request):
 
 
 
+
+
             commission = Decimal(
 
                 str(
 
-                    transaction_content.get(
+                    transaction_data.get(
 
                         "commission",
+
                         "0"
 
                     )
@@ -1849,71 +1998,114 @@ def buy_product(request):
 
                 request_id=request_id,
 
-                transaction_id=transaction_data.get(
+                transaction_id=
+
+                transaction_data.get(
+
                     "transactionId",
+
                     ""
+
                 ),
+
 
                 service=product,
 
+
                 product_name=service_name,
+
 
                 variation=variation,
 
+
                 phone=phone,
+
 
                 amount=amount,
 
+
                 total_amount=amount,
+
 
                 commission=commission,
 
-                status=transaction_data.get(
+
+                status=
+
+                transaction_data.get(
+
                     "status",
+
                     "delivered"
-                ),
+
+                )
 
             )
+
+
+
+
 
 
 
 
             wallet.amount -= amount
 
+
+
             wallet.save(
+
                 update_fields=[
+
                     "amount"
+
                 ]
+
             )
+
+
+
+
+
 
 
 
             return Response({
 
-                "success": True,
+                "success":True,
 
-                "product": product,
+                "product":product,
 
-                "service_name": service_name,
+                "service_name":service_name,
 
-                "variation_code": variation_code,
+                "variation_code":variation_code,
 
-                "variation_name": variation_name,
+                "variation_name":variation_name,
 
-                "request_id": request_id,
+                "request_id":request_id,
 
-                "transaction_id": transaction_data.get(
+                "transaction_id":
+
+                transaction_data.get(
+
                     "transactionId",
+
                     ""
+
                 ),
 
-                "amount": str(amount),
+                "amount":str(amount),
 
-                "commission": str(commission),
+                "commission":str(commission),
 
-                "new_balance": str(wallet.amount),
+                "new_balance":str(wallet.amount)
 
             })
+
+
+
+
+
 
 
 
@@ -1921,19 +2113,20 @@ def buy_product(request):
 
 
         print("BUY PRODUCT ERROR")
+
         traceback.print_exc()
+
 
 
         return Response(
 
             {
-                 str(e)
+                "error":str(e)
             },
 
             status=500
 
         )
-
 
 from decimal import Decimal
 import logging
