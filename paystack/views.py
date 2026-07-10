@@ -1416,7 +1416,7 @@ def buy_product(request):
         if not product:
             return Response(
                 {
-                    "error": "Invalid product"
+                    "Invalid product"
                 },
                 status=400
             )
@@ -1430,7 +1430,7 @@ def buy_product(request):
         except Exception:
             return Response(
                 {
-                    "error": "Invalid amount"
+                     "Invalid amount"
                 },
                 status=400
             )
@@ -1444,7 +1444,7 @@ def buy_product(request):
         if not phone:
             return Response(
                 {
-                    "error": "Phone required"
+                     "Phone required"
                 },
                 status=400
             )
@@ -1474,7 +1474,7 @@ def buy_product(request):
 
                 return Response(
                     {
-                        "error": "Insufficient balance"
+                         "Insufficient balance"
                     },
                     status=400
                 )
@@ -1552,7 +1552,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error": "variation_code required"
+                            "variation_code required"
                         },
                         status=400
                     )
@@ -1569,7 +1569,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error": "Invalid data network"
+                            "Invalid data network"
                         },
                         status=400
                     )
@@ -1615,16 +1615,21 @@ def buy_product(request):
             # CABLE TV
             # ==========================
 
+            
             elif product == "cabletv":
 
 
-                
+
+
                 provider = str(
-    request.data.get(
-        "provider",
-        request.data.get("serviceID", "")
-    )
-).lower().strip()
+
+                    request.data.get(
+                        "provider",
+                        ""
+                    )
+
+                ).lower().strip()
+
 
 
 
@@ -1634,63 +1639,117 @@ def buy_product(request):
 
 
 
+
                 if not service_id:
 
                     return Response(
                         {
-                            "error": "Invalid provider"
+                            "error":
+                            "Invalid provider"
                         },
                         status=400
                     )
 
 
 
+
+
                 variation_code = str(
-                    request.data.get("variation_code","")
+
+                    request.data.get(
+                        "variation_code",
+                        ""
+                    )
+
                 ).strip()
 
 
 
+
+
                 variation = VariationCode.objects.filter(
+
                     variation_code=variation_code
+
                 ).first()
 
 
 
+
+
                 variation_name = (
+
                     variation.name
+
                     if variation
-                    else "Subscription"
+
+                    else
+
+                    "Subscription"
+
                 )
+
+
 
 
 
                 service_name = (
-                    f"{provider.upper()} - {variation_name}"
+
+                    provider.upper()
+
+                    +
+                    " - "
+
+                    +
+                    variation_name
+
                 )
+
+
+
+
+                decoder = request.data.get(
+                    "decoder_number"
+                )
+
+
+
+                if not decoder:
+
+                    return Response(
+                        {
+                            "error":
+                            "Decoder number required"
+                        },
+                        status=400
+                    )
+
 
 
 
                 payload.update({
 
-                    "serviceID": service_id,
+                    "serviceID":service_id,
 
-                    "billersCode": request.data.get(
-                        "decoder_number"
-                    ),
+                    "billersCode":decoder,
 
-                    "variation_code": variation_code,
+                    "variation_code":variation_code
 
                 })
 
 
 
 
+
+
+
             else:
+
 
                 return Response(
                     {
-                        "error":"Unsupported product"
+                        
+                        "Unsupported product"
                     },
                     status=400
                 )
@@ -1698,18 +1757,19 @@ def buy_product(request):
 
 
 
-            print("PAYLOAD:", payload)
 
 
 
             data, status_code = vtpass_post(
+
                 "https://sandbox.vtpass.com/api/pay",
+
                 payload
+
             )
 
 
 
-            print("VTPASS RESPONSE:", data)
 
 
 
@@ -1719,6 +1779,9 @@ def buy_product(request):
                     data,
                     status=status_code
                 )
+
+
+
 
 
 
@@ -1732,7 +1795,9 @@ def buy_product(request):
 
 
 
-            transaction_data = {}
+
+
+            transaction_content = {}
 
 
 
@@ -1741,29 +1806,39 @@ def buy_product(request):
                 dict
             ):
 
-                transaction_data = (
+                transaction_content = (
+
                     data["content"]
-                    .get("transactions", {})
+
+                    .get(
+                        "transactions",
+                        {}
+                    )
+
                 )
 
 
-
-            if transaction_data.get(
-                "product_name"
-            ):
-
-                service_name = transaction_data["product_name"]
 
 
 
             commission = Decimal(
+
                 str(
-                    transaction_data.get(
+
+                    transaction_content.get(
+
                         "commission",
                         "0"
+
                     )
+
                 )
+
             )
+
+
+
+
 
 
 
@@ -1852,7 +1927,7 @@ def buy_product(request):
         return Response(
 
             {
-                "error": str(e)
+                 str(e)
             },
 
             status=500
