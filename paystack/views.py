@@ -1432,7 +1432,7 @@ def buy_product(request):
 
             return Response(
                 {
-                    "error":"Invalid product"
+                    "Invalid product"
                 },
                 status=400
             )
@@ -1471,7 +1471,7 @@ def buy_product(request):
 
             return Response(
                 {
-                    "error":"Phone required"
+                    "Phone required"
                 },
                 status=400
             )
@@ -1508,7 +1508,7 @@ def buy_product(request):
 
                 return Response(
                     {
-                        "error":"Insufficient balance"
+                        "Insufficient balance"
                     },
                     status=400
                 )
@@ -1557,7 +1557,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":"Invalid network"
+                            "Invalid network"
                         },
                         status=400
                     )
@@ -1605,7 +1605,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":"variation_code required"
+                            "variation_code required"
                         },
                         status=400
                     )
@@ -1625,7 +1625,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":"Invalid data network"
+                            "Invalid data network"
                         },
                         status=400
                     )
@@ -1720,7 +1720,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":"Invalid provider"
+                            "Invalid provider"
                         },
                         status=400
                     )
@@ -1747,7 +1747,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":"variation_code required"
+                            "variation_code required"
                         },
                         status=400
                     )
@@ -1807,7 +1807,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":"Smartcard number required"
+                            "Smartcard number required"
                         },
                         status=400
                     )
@@ -1835,7 +1835,7 @@ def buy_product(request):
 
                 return Response(
                     {
-                        "error":"Unsupported product"
+                        "Unsupported product"
                     },
                     status=400
                 )
@@ -2031,7 +2031,7 @@ def buy_product(request):
         return Response(
 
             {
-                "error":str(e)
+                str(e)
             },
 
             status=500
