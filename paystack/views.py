@@ -1078,10 +1078,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import Wallet, Transaction, VariationCode
 
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def buy_product(request):
+
+    print("BUY PRODUCT STARTED")
+    print("USER:", request.user)
+    print("DATA:", request.data)
+
     user = request.user
 
     product_key = str(request.data.get("product", "")).lower().strip()
