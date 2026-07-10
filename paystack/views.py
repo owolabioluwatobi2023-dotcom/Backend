@@ -1444,7 +1444,7 @@ def buy_product(request):
 
             return Response(
                 {
-                    "error":"Invalid product"
+                    "Invalid product"
                 },
                 status=400
             )
@@ -1466,7 +1466,7 @@ def buy_product(request):
 
             return Response(
                 {
-                    "error":"Invalid amount"
+                    "Invalid amount"
                 },
                 status=400
             )
@@ -1485,7 +1485,7 @@ def buy_product(request):
 
             return Response(
                 {
-                    "error":"Phone required"
+                    "Phone required"
                 },
                 status=400
             )
@@ -1529,7 +1529,7 @@ def buy_product(request):
 
                 return Response(
                     {
-                        "error":"Insufficient balance"
+                        "Insufficient balance"
                     },
                     status=400
                 )
@@ -1587,7 +1587,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":"Invalid network"
+                            "Invalid network"
                         },
                         status=400
                     )
@@ -1640,7 +1640,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":
+                            
                             "variation_code required"
                         },
                         status=400
@@ -1666,7 +1666,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":
+                    
                             "Invalid data network"
                         },
                         status=400
@@ -1771,7 +1771,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":
+                            
                             "Invalid provider"
                         },
                         status=400
@@ -1844,7 +1844,7 @@ def buy_product(request):
 
                     return Response(
                         {
-                            "error":
+                            
                             "Decoder number required"
                         },
                         status=400
@@ -1875,7 +1875,7 @@ def buy_product(request):
 
                 return Response(
                     {
-                        "error":
+                        
                         "Unsupported product"
                     },
                     status=400
@@ -2121,7 +2121,7 @@ def buy_product(request):
         return Response(
 
             {
-                "error":str(e)
+                str(e)
             },
 
             status=500
