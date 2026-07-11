@@ -2163,3 +2163,13 @@ def vtpass_webhook(request):
         logger.exception("VTpass webhook error: %s", e)
 
     return Response({"response": "success"})
+
+
+
+
+
+
+
+
+
+

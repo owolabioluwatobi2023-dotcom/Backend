@@ -2,6 +2,8 @@ from django.contrib import admin
 from .models import Wallet, Transaction
 
 
+
+
 # =========================
 # WALLET ADMIN
 # =========================
@@ -172,3 +174,11 @@ class TransactionAdmin(admin.ModelAdmin):
 
 
     show_variation.short_description = "Variation"
+
+
+
+
+
+
+
+

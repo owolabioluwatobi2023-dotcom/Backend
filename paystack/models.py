@@ -454,3 +454,8 @@ class Transaction(models.Model):
 
         return f"{self.user.username} - {self.product_name}"
 
+
+
+
+
+

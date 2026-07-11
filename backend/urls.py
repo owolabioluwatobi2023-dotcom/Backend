@@ -34,6 +34,12 @@ urlpatterns = [
 
     path('api/', include('api.urls')),
     path('api/paystack/', include('paystack.urls')),
+    path(
+        "api/notifications/",
+        include(
+            "notifications.urls"
+        )
+    ),
     
     
 

@@ -6,7 +6,6 @@ from rest_framework.decorators import api_view, permission_classes
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -16,6 +15,18 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.utils import timezone
+
+from notifications.services import (
+    send_welcome_notification,
+    send_login_notification,
+)
+
 @api_view(['POST'])
 def register_user(request):
     username = request.data.get('username')
@@ -41,6 +52,10 @@ def register_user(request):
         first_name=first_name,
         last_name=last_name
     )
+
+    # SEND WELCOME NOTIFICATION
+    send_welcome_notification(user)
+
     # Generate JWT token
     refresh = RefreshToken.for_user(user)
 
@@ -80,6 +95,37 @@ def login_user(request):
 
     if user is None:
         return Response({"error": "Invalid credentials"}, status=400)
+    
+    # GET DEVICE INFO FROM APP
+    device = request.data.get(
+        "device",
+        "Unknown Device"
+    )
+
+
+    ip = request.META.get(
+        "REMOTE_ADDR"
+    )
+
+
+    login_time = timezone.now()
+
+
+
+    # SEND LOGIN ALERT
+    send_login_notification(
+
+        user=user,
+
+        device=device,
+
+        ip=ip,
+
+        login_time=login_time
+
+    )
+
+
     # Generate JWT token
     token = RefreshToken.for_user(user)
 
