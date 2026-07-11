@@ -117,7 +117,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+from dotenv import load_dotenv
 
+load_dotenv()
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
