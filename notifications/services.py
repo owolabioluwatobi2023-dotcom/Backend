@@ -210,11 +210,8 @@
 #         # time.sleep(5)
 
 
-
-from .models import Notification
+from .models import Notification, DeviceToken
 from .firebase import send_push_notification
-
-
 def create_notification(
     user,
     notification_type,
@@ -224,33 +221,30 @@ def create_notification(
 ):
 
     notification = Notification.objects.create(
-
         user=user,
-
         notification_type=notification_type,
-
         title=title,
-
         message=message,
-
-        html_message=html_message
+        html_message=html_message,
     )
 
+    # Get the user's device
+    device = DeviceToken.objects.filter(user=user).first()
 
-    send_push_notification(
-
-        user=user,
-
-        title=title,
-
-        body=message
-
-    )
-
+    if device:
+        try:
+            send_push_notification(
+                token=device.token,
+                title=title,
+                body=message,
+            )
+            print("✅ Push notification sent")
+        except Exception as e:
+            print("❌ Push notification error:", e)
+    else:
+        print("❌ No device token found for user:", user.username)
 
     return notification
-
-
 
 def send_welcome_notification(user):
 
