@@ -5,94 +5,93 @@
 # from firebase_admin import credentials, messaging
 
 
+# # Initialize Firebase only once
 # if not firebase_admin._apps:
 
-#     if os.path.exists("firebase-service-account.json"):
+#     firebase_json = os.environ.get("FIREBASE_CREDENTIALS")
 
-#         cred = credentials.Certificate(
-#             "firebase-service-account.json"
-#         )
+#     if firebase_json:
 
-#         firebase_admin.initialize_app(cred)
+#         try:
+#             cred = credentials.Certificate(
+#                 json.loads(firebase_json)
+#             )
 
-#         print("🔥 Firebase initialized successfully")
+#             firebase_admin.initialize_app(cred)
+
+#             print("🔥 Firebase initialized successfully")
+
+#         except Exception as e:
+#             print("❌ Firebase initialization failed:", e)
 
 #     else:
-#         print("❌ firebase-service-account.json not found")
+#         print("❌ FIREBASE_CREDENTIALS environment variable missing")
 
 
 # def send_push_notification(token, title, body, data=None):
 
-#     message = messaging.Message(
-#         notification=messaging.Notification(
-#             title=title,
-#             body=body,
-#         ),
-#         token=token,
-#         data=data or {},
-#     )
+#     try:
 
-#     response = messaging.send(message)
+#         message = messaging.Message(
 
-#     return response
+#             notification=messaging.Notification(
+#                 title=title,
+#                 body=body,
+#             ),
+
+#             token=token,
+
+#             data=data or {}
+#         )
+
+#         response = messaging.send(message)
+
+#         return response
 
 
+#     except Exception as e:
 
+#         print("❌ Push notification failed:", e)
+
+#         return None
 
 
 import os
-import json
 import firebase_admin
 
 from firebase_admin import credentials, messaging
 
 
-# Initialize Firebase only once
 if not firebase_admin._apps:
 
-    firebase_json = os.environ.get("FIREBASE_CREDENTIALS")
+    firebase_file = os.path.join(
+        os.path.dirname(__file__),
+        "../firebase-service-account.json"
+    )
 
-    if firebase_json:
+    if os.path.exists(firebase_file):
 
-        try:
-            cred = credentials.Certificate(
-                json.loads(firebase_json)
-            )
+        cred = credentials.Certificate(firebase_file)
 
-            firebase_admin.initialize_app(cred)
+        firebase_admin.initialize_app(cred)
 
-            print("🔥 Firebase initialized successfully")
-
-        except Exception as e:
-            print("❌ Firebase initialization failed:", e)
+        print("🔥 Firebase initialized successfully")
 
     else:
-        print("❌ FIREBASE_CREDENTIALS environment variable missing")
+        print("❌ Firebase service file not found")
 
 
 def send_push_notification(token, title, body, data=None):
 
-    try:
+    message = messaging.Message(
+        notification=messaging.Notification(
+            title=title,
+            body=body,
+        ),
+        token=token,
+        data=data or {},
+    )
 
-        message = messaging.Message(
+    response = messaging.send(message)
 
-            notification=messaging.Notification(
-                title=title,
-                body=body,
-            ),
-
-            token=token,
-
-            data=data or {}
-        )
-
-        response = messaging.send(message)
-
-        return response
-
-
-    except Exception as e:
-
-        print("❌ Push notification failed:", e)
-
-        return None
+    return response
