@@ -21,64 +21,30 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
-from django.utils import timezone
-
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from notifications.services import (
     send_welcome_notification,
     send_login_notification,
 )
 
-
-
-# ==========================
-# REGISTER USER
-# ==========================
-
 @api_view(['POST'])
 def register_user(request):
-
     username = request.data.get('username')
     email = request.data.get('email')
     first_name = request.data.get('first_name')
     last_name = request.data.get('last_name')
     password = request.data.get('password')
 
-
     if not username or not password:
-        return Response(
-            {
-                "Username and password required"
-            },
-            status=400
-        )
-
+        return Response({"error": "Username and password required"}, status=400)
 
     if User.objects.filter(username=username).exists():
-        return Response(
-            {
-                 "Username exists"
-            },
-            status=400
-        )
-
+        return Response({"error": "Username exists"}, status=400)
 
     if email and User.objects.filter(email=email).exists():
-        return Response(
-            {
-                 "Email exists"
-            },
-            status=400
-        )
+        return Response({"error": "Email exists"}, status=400)
 
-
-    # CREATE USER
+    # Create user
     user = User.objects.create_user(
         username=username,
         email=email,
@@ -87,83 +53,51 @@ def register_user(request):
         last_name=last_name
     )
 
-
     # SEND WELCOME NOTIFICATION
-    # Disabled until device token is saved
-    try:
-        send_welcome_notification(user)
-
-    except Exception as e:
-        print(
-            "Welcome notification error:",
-            e
-        )
+    send_welcome_notification(user)
 
 
-    # CREATE JWT
+    # Generate JWT token
     refresh = RefreshToken.for_user(user)
 
-
-    return Response(
-
-        {
-            "message": "User created successfully",
-
-            "user":
-            {
-                "id": user.id,
-                "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "email": user.email,
-            },
-
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
+    return Response({
+        "message": "User created successfully",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
         },
-
-        status=201
-    )
-
+        "token": str(refresh.access_token)
+    }, status=201)
 
 
 
 
-# ==========================
-# LOGIN USER
-# ==========================
+
+
+
+
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth import authenticate
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+
 
 @api_view(['POST'])
 def login_user(request):
+    username = request.data.get("username")
+    password = request.data.get("password")
 
-    username = request.data.get(
-        "username"
-    )
-
-    password = request.data.get(
-        "password"
-    )
-
-
-    user = authenticate(
-        username=username,
-        password=password
-    )
-
+    user = authenticate(username=username, password=password)
 
     if user is None:
-
-        return Response(
-            {
-                "Invalid credentials"
-            },
-            status=400
-        )
-
-
-
-    # DEVICE INFORMATION
-
+        return Response({"error": "Invalid credentials"}, status=400)
+    
+    # GET DEVICE INFO FROM APP
     device = request.data.get(
         "device",
         "Unknown Device"
@@ -180,188 +114,32 @@ def login_user(request):
 
 
     # SEND LOGIN ALERT
+    send_login_notification(
 
-    try:
+        user=user,
 
-        send_login_notification(
+        device=device,
 
-            user=user,
+        ip=ip,
 
-            device=device,
-
-            ip=ip,
-
-            login_time=login_time
-
-        )
-
-
-    except Exception as e:
-
-        print(
-            "Login notification error:",
-            e
-        )
-
-
-
-    # JWT TOKEN
-
-    token = RefreshToken.for_user(user)
-
-
-
-    return Response(
-
-        {
-
-            "access":
-            str(token.access_token),
-
-
-            "refresh":
-            str(token),
-
-
-            "user":
-            {
-
-                "id": user.id,
-
-                "username":
-                user.username,
-
-                "first_name":
-                user.first_name,
-
-                "last_name":
-                user.last_name,
-
-                "email":
-                user.email,
-
-            }
-
-        }
+        login_time=login_time
 
     )
-# from notifications.services import (
-#     send_welcome_notification,
-#     send_login_notification,
-# )
-
-# @api_view(['POST'])
-# def register_user(request):
-#     username = request.data.get('username')
-#     email = request.data.get('email')
-#     first_name = request.data.get('first_name')
-#     last_name = request.data.get('last_name')
-#     password = request.data.get('password')
-
-#     if not username or not password:
-#         return Response({"error": "Username and password required"}, status=400)
-
-#     if User.objects.filter(username=username).exists():
-#         return Response({"error": "Username exists"}, status=400)
-
-#     if email and User.objects.filter(email=email).exists():
-#         return Response({"error": "Email exists"}, status=400)
-
-#     # Create user
-#     user = User.objects.create_user(
-#         username=username,
-#         email=email,
-#         password=password,
-#         first_name=first_name,
-#         last_name=last_name
-#     )
-
-#     # SEND WELCOME NOTIFICATION
-#     send_welcome_notification(user)
-
-#     # Generate JWT token
-#     refresh = RefreshToken.for_user(user)
-
-#     return Response({
-#         "message": "User created successfully",
-#         "user": {
-#             "id": user.id,
-#             "username": user.username,
-#             "first_name": user.first_name,
-#             "last_name": user.last_name,
-#             "email": user.email,
-#         },
-#         "token": str(refresh.access_token)
-#     }, status=201)
 
 
+    # Generate JWT token
+    token = RefreshToken.for_user(user)
 
-
-
-
-
-
-# from django.core.mail import send_mail
-# from django.conf import settings
-# from django.contrib.auth import authenticate
-# from rest_framework.decorators import api_view
-# from rest_framework.response import Response
-# from rest_framework_simplejwt.tokens import RefreshToken
-
-
-# @api_view(['POST'])
-# def login_user(request):
-#     username = request.data.get("username")
-#     password = request.data.get("password")
-
-#     user = authenticate(username=username, password=password)
-
-#     if user is None:
-#         return Response({"error": "Invalid credentials"}, status=400)
-    
-#     # GET DEVICE INFO FROM APP
-#     device = request.data.get(
-#         "device",
-#         "Unknown Device"
-#     )
-
-
-#     ip = request.META.get(
-#         "REMOTE_ADDR"
-#     )
-
-
-#     login_time = timezone.now()
-
-
-
-#     # SEND LOGIN ALERT
-#     send_login_notification(
-
-#         user=user,
-
-#         device=device,
-
-#         ip=ip,
-
-#         login_time=login_time
-
-#     )
-
-
-#     # Generate JWT token
-#     token = RefreshToken.for_user(user)
-
-#     return Response({
-#         "access": str(token.access_token),
-#         "refresh": str(token),
-#         "user": {
-#             "id": user.id,
-#             "username": user.username,
-#             "first_name": user.first_name,
-#             "last_name": user.last_name,
-#         }
-#     })
+    return Response({
+        "access": str(token.access_token),
+        "refresh": str(token),
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+        }
+    })
 # =========================
 # PROFILE
 # =========================
