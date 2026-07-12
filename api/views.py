@@ -26,9 +26,9 @@ from notifications.services import (
     send_welcome_notification,
     send_login_notification,
 )
-
 @api_view(['POST'])
 def register_user(request):
+
     username = request.data.get('username')
     email = request.data.get('email')
     first_name = request.data.get('first_name')
@@ -36,15 +36,18 @@ def register_user(request):
     password = request.data.get('password')
 
     if not username or not password:
-        return Response({"error": "Username and password required"}, status=400)
+        return Response(
+            {"error": "Username and password required"},
+            status=400
+        )
 
     if User.objects.filter(username=username).exists():
-        return Response({"error": "Username exists"}, status=400)
+        return Response(
+            {"error": "Username exists"},
+            status=400
+        )
 
-    if email and User.objects.filter(email=email).exists():
-        return Response({"error": "Email exists"}, status=400)
 
-    # Create user
     user = User.objects.create_user(
         username=username,
         email=email,
@@ -53,11 +56,13 @@ def register_user(request):
         last_name=last_name
     )
 
-    # SEND WELCOME NOTIFICATION
-    send_welcome_notification(user)
+
+    try:
+        send_welcome_notification(user)
+    except Exception as e:
+        print("Firebase notification error:", e)
 
 
-    # Generate JWT token
     refresh = RefreshToken.for_user(user)
 
     return Response({
@@ -65,13 +70,10 @@ def register_user(request):
         "user": {
             "id": user.id,
             "username": user.username,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
             "email": user.email,
         },
         "token": str(refresh.access_token)
     }, status=201)
-
 
 
 
@@ -86,53 +88,55 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-
 @api_view(['POST'])
 def login_user(request):
+
     username = request.data.get("username")
     password = request.data.get("password")
 
-    user = authenticate(username=username, password=password)
+    user = authenticate(
+        username=username,
+        password=password
+    )
 
     if user is None:
-        return Response({"error": "Invalid credentials"}, status=400)
-    
-    # GET DEVICE INFO FROM APP
+        return Response(
+            {"error": "Invalid credentials"},
+            status=400
+        )
+
+
     device = request.data.get(
         "device",
         "Unknown Device"
     )
 
-
     ip = request.META.get(
         "REMOTE_ADDR"
     )
 
-
     login_time = timezone.now()
 
 
+    # Send login notification safely
+    try:
+        send_login_notification(
+            user=user,
+            device=device,
+            ip=ip,
+            login_time=login_time
+        )
 
-    # SEND LOGIN ALERT
-    send_login_notification(
-
-        user=user,
-
-        device=device,
-
-        ip=ip,
-
-        login_time=login_time
-
-    )
+    except Exception as e:
+        print("LOGIN NOTIFICATION ERROR:", e)
 
 
-    # Generate JWT token
-    token = RefreshToken.for_user(user)
+    refresh = RefreshToken.for_user(user)
+
 
     return Response({
-        "access": str(token.access_token),
-        "refresh": str(token),
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
         "user": {
             "id": user.id,
             "username": user.username,
