@@ -55,8 +55,8 @@
 
 #         return None
 
-
 import os
+import json
 import firebase_admin
 
 from firebase_admin import credentials, messaging
@@ -64,21 +64,24 @@ from firebase_admin import credentials, messaging
 
 if not firebase_admin._apps:
 
-    firebase_file = os.path.join(
-        os.path.dirname(__file__),
-        "../firebase-service-account.json"
-    )
+    firebase_json = os.getenv("FIREBASE_SERVICE_ACCOUNT")
 
-    if os.path.exists(firebase_file):
+    if firebase_json:
 
-        cred = credentials.Certificate(firebase_file)
+        try:
+            cred = credentials.Certificate(
+                json.loads(firebase_json)
+            )
 
-        firebase_admin.initialize_app(cred)
+            firebase_admin.initialize_app(cred)
 
-        print("🔥 Firebase initialized successfully")
+            print("🔥 Firebase initialized successfully")
+
+        except Exception as e:
+            print("❌ Firebase initialization error:", e)
 
     else:
-        print("❌ Firebase service file not found")
+        print("❌ FIREBASE_SERVICE_ACCOUNT environment variable missing")
 
 
 def send_push_notification(token, title, body, data=None):
