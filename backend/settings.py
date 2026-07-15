@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-2q3*+9$im5lx)lh$$d60#!cdk1-7x2mb_utm0z5kkyh^e)_q3#
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-DEBUG = config("DEBUG", default=False, cast=bool)
+DEBUG = config("DEBUG", default=True, cast=bool)
 
 
 # Application definition
@@ -93,12 +93,18 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 
-
 DATABASES = {
     "default": dj_database_url.config(
-        default=config("DATABASE_URL")
+        default=config("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require=True,
     )
 }
+# DATABASES = {
+#     "default": dj_database_url.config(
+#         default=config("DATABASE_URL")
+#     )
+# }
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -170,16 +176,16 @@ SIMPLE_JWT = {
 }
 
 
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# EMAIL_HOST = "smtp.gmail.com"
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
 
-# EMAIL_HOST_USER = "owolabioluwatobi2023@gmail.com"
-# EMAIL_HOST_PASSWORD = "emnb clky oqwo bjhn"   # Replace with your App Password
+EMAIL_HOST_USER = "owolabioluwatobi2023@gmail.com"
+EMAIL_HOST_PASSWORD = "emnbclkyoqwobjhn"
 
-# DEFAULT_FROM_EMAIL = "Mass Data <owolabioluwatobi2023@gmail.com>"
+DEFAULT_FROM_EMAIL = "Mass Data <owolabioluwatobi2023@gmail.com>"
 
 
 

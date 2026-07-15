@@ -640,3 +640,298 @@ def app_stats(request):
         "total_users": User.objects.count(),
         "app_link": "https://your-app-link.com"
     })
+
+
+
+
+
+
+
+
+
+
+# forgetten reset_password
+import random
+
+from django.core.mail import send_mail
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+from django.contrib.auth.models import User
+from .models import PasswordResetOTP
+
+
+@api_view(["POST"])
+def forgot_password(request):
+
+    email = request.data.get("email")
+
+
+    # Check email input
+    if not email:
+        return Response(
+            {
+                "error": "Email required"
+            },
+            status=400
+        )
+
+
+    # Clean email
+    email = email.strip().lower()
+
+
+    # Find user email
+    user = User.objects.filter(
+        email__iexact=email
+    ).first()
+
+
+    if not user:
+        return Response(
+            {
+                "error": "Email not found"
+            },
+            status=404
+        )
+
+
+    # Remove previous OTP
+    PasswordResetOTP.objects.filter(
+        user=user
+    ).delete()
+
+
+    # Create OTP
+    otp = str(
+        random.randint(100000, 999999)
+    )
+
+
+    # Save OTP
+    PasswordResetOTP.objects.create(
+        user=user,
+        otp=otp
+    )
+
+
+    print("PASSWORD RESET OTP:", otp)
+
+
+    try:
+
+        sent = send_mail(
+
+            subject="Mass Data Password Reset OTP",
+
+            message=f"""
+Hello {user.username},
+
+Your Mass Data password reset OTP is:
+
+{otp}
+
+This OTP expires in 10 minutes.
+
+Do not share this code with anyone.
+""",
+
+            # Your Mass Data Gmail account
+            from_email="owolabioluwatobi2023@gmail.com",
+
+            # User receives OTP here
+            recipient_list=[
+                user.email
+            ],
+
+            fail_silently=False,
+        )
+
+
+        print("EMAIL SENT:", sent)
+
+
+        if sent == 0:
+            return Response(
+                {
+                    "error": "Email was not sent"
+                },
+                status=500
+            )
+
+
+    except Exception as e:
+
+        print("EMAIL ERROR:", str(e))
+
+
+        return Response(
+            {
+                "error": "Failed to send OTP",
+                "details": str(e)
+            },
+            status=500
+        )
+
+
+    return Response(
+        {
+            "message": "OTP sent successfully"
+        }
+    )
+
+import random
+
+from django.conf import settings
+from django.core.mail import send_mail
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+from django.contrib.auth.models import User
+
+from .models import PasswordResetOTP
+
+
+from django.utils import timezone
+
+@api_view(["POST"])
+def verify_otp(request):
+
+    email = request.data.get("email")
+    otp_code = request.data.get("otp")
+
+
+    if not email or not otp_code:
+        return Response(
+            {
+                "error": "Email and OTP are required"
+            },
+            status=400
+        )
+
+
+    user = User.objects.filter(
+        email=email
+    ).first()
+
+
+    if not user:
+        return Response(
+            {
+                "error": "User not found"
+            },
+            status=404
+        )
+
+
+    reset = PasswordResetOTP.objects.filter(
+        user=user,
+        otp=otp_code
+    ).first()
+
+
+    if not reset:
+        return Response(
+            {
+                "error": "Invalid OTP"
+            },
+            status=400
+        )
+
+
+    if reset.is_expired():
+
+        reset.delete()
+
+        return Response(
+            {
+                "error": "OTP expired"
+            },
+            status=400
+        )
+
+
+    reset.verified = True
+    reset.save()
+
+
+    return Response(
+        {
+            "message": "OTP verified successfully"
+        }
+    )
+
+
+
+
+@api_view(["POST"])
+def reset_password(request):
+
+    email = request.data.get("email")
+    new_password = request.data.get("new_password")
+
+
+    if not email or not new_password:
+        return Response(
+            {
+                "error": "Email and new password are required"
+            },
+            status=400
+        )
+
+
+    user = User.objects.filter(
+        email=email
+    ).first()
+
+
+    if not user:
+        return Response(
+            {
+                "error": "User not found"
+            },
+            status=404
+        )
+
+
+    reset = PasswordResetOTP.objects.filter(
+        user=user,
+        verified=True
+    ).first()
+
+
+    if not reset:
+        return Response(
+            {
+                "error": "Please verify OTP first"
+            },
+            status=400
+        )
+
+
+    if reset.is_expired():
+
+        reset.delete()
+
+        return Response(
+            {
+                "error": "OTP expired"
+            },
+            status=400
+        )
+
+
+    user.set_password(new_password)
+    user.save()
+
+
+    # remove OTP after successful reset
+    reset.delete()
+
+
+    return Response(
+        {
+            "message": "Password reset successful"
+        }
+    )

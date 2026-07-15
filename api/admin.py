@@ -1,12 +1,6 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import ServiceCategory, ServiceProduct, Variation
-
-admin.site.register(ServiceCategory)
-admin.site.register(ServiceProduct)
-admin.site.register(Variation)
-
 # class AdminWallet(models.Model):
 #     balance = models.FloatField(default=0)
 # from .models import Wallet, Transaction

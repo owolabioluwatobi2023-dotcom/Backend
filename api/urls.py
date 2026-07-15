@@ -119,15 +119,16 @@ from .views import (
     user_profile,
     login_user,
     logout_user,
-    forgot_password,
-    reset_password,
     google_login,
 
     # PAYSTACK
     initialize_payment,
     paystack_balance,
     service_variations,
-    app_stats
+    app_stats,
+    verify_otp,
+    reset_password,
+    forgot_password
    
    
     
@@ -159,7 +160,20 @@ urlpatterns = [
     # AIRTIME & DATA
     
 
-    
+path(
+        "forgot-password/",
+        forgot_password
+    ),
+
+    path(
+        "verify-otp/",
+        verify_otp
+    ),
+
+    path(
+        "reset-password/",
+        reset_password
+    ),
 
     path('service-variations/', service_variations, name='service-variations'),
     path("app-stats/", app_stats, name="app_stats"),
