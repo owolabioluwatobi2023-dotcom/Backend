@@ -122,13 +122,13 @@ from .views import (
     google_login,
 
     # PAYSTACK
-    initialize_payment,
     paystack_balance,
     service_variations,
     app_stats,
     verify_otp,
     reset_password,
-    forgot_password
+    forgot_password,
+    initialize_payment
    
    
     
@@ -151,7 +151,7 @@ urlpatterns = [
     path('google-login/', google_login),
 
     # PAYSTACK
-    path('paystack/initialize/', initialize_payment),
+   
     path('paystack/balance/', paystack_balance),
 
     # TEST
@@ -177,7 +177,7 @@ path(
 
     path('service-variations/', service_variations, name='service-variations'),
     path("app-stats/", app_stats, name="app_stats"),
-       
+        path( "initialize_payment/", initialize_payment),
 
   
 

@@ -1,8 +1,7 @@
 from decimal import Decimal
-
 import requests
+
 from django.conf import settings
-from django.db import transaction
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -10,7 +9,7 @@ from rest_framework.response import Response
 from .models import Wallet, Transaction
 
 
-@api_view(["POST"])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def verify_payment(request):
 
@@ -18,165 +17,118 @@ def verify_payment(request):
 
     if not reference:
         return Response(
-            {
-                "status": False,
-                "message": "Reference is required.",
-            },
-            status=400,
+            {"error": "Reference required"},
+            status=400
         )
+
+    # Already processed?
+    existing = Transaction.objects.filter(
+        reference=reference
+    ).first()
+
+    if existing:
+        wallet, _ = Wallet.objects.get_or_create(
+            owner=request.user,
+            defaults={"amount": Decimal("0.00")}
+        )
+
+        return Response({
+            "status": "success",
+            "amount": str(existing.amount),
+            "new_balance": str(wallet.amount),
+            "message": "Already processed"
+        })
 
     url = f"https://api.paystack.co/transaction/verify/{reference}"
 
     headers = {
-        "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+        "Authorization":
+        f"Bearer {settings.PAYSTACK_SECRET_KEY}"
     }
 
-    try:
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=30,
-        )
+    response = requests.get(
+        url,
+        headers=headers
+    )
 
-        response.raise_for_status()
+    data = response.json()
 
-        data = response.json()
-
-    except requests.RequestException as e:
-        return Response(
-            {
-                "status": False,
-                "message": f"Network error: {str(e)}",
-            },
-            status=500,
-        )
+    print("PAYSTACK RESPONSE:", data)
 
     if not data.get("status"):
         return Response(
-            {
-                "status": False,
-                "message": data.get(
-                    "message",
-                    "Verification failed.",
-                ),
-            },
-            status=400,
+            {"error": "Verification failed"},
+            status=400
         )
 
     payment = data["data"]
 
-    if payment.get("status") != "success":
+    if payment["status"] != "success":
         return Response(
-            {
-                "status": False,
-                "message": "Payment has not been completed.",
-            },
-            status=400,
+            {"error": "Payment not successful"},
+            status=400
         )
+
+    amount = Decimal(
+        str(payment["amount"])
+    ) / Decimal("100")
 
     user = request.user
 
-    customer_email = (
-        payment.get("customer", {})
-        .get("email", "")
-        .strip()
-        .lower()
+    print("USER ID:", user.id)
+    print("USERNAME:", user.username)
+
+    wallet, created = Wallet.objects.get_or_create(
+        owner=user,
+        defaults={"amount": Decimal("0.00")}
     )
 
-    if (
-        user.email
-        and customer_email
-        and customer_email != user.email.strip().lower()
-    ):
-        return Response(
-            {
-                "status": False,
-                "message": "This payment does not belong to your account.",
-            },
-            status=403,
-        )
+    print("WALLET ID:", wallet.id)
+    print("OLD BALANCE:", wallet.amount)
 
-    amount = Decimal(str(payment["amount"])) / Decimal("100")
+    wallet.amount += amount
+    wallet.save(update_fields=["amount"])
 
-    try:
+    wallet.refresh_from_db()
 
-        with transaction.atomic():
+    print("NEW BALANCE:", wallet.amount)
 
-            # Lock duplicate check
-            existing = (
-                Transaction.objects
-                .select_for_update()
-                .filter(request_id=reference)
-                .first()
-            )
+    # Transaction.objects.create(
+    #     user=user,
+    #     reference=reference,
+    #     amount=amount,
+    #     status="success",
+    #     email=payment["customer"]["email"]
+    # )
+    Transaction.objects.create(
+    user=user,
+    request_id=reference,
+    amount=amount,
+    status="success",
+    email=payment["customer"]["email"]
+)
+    return Response({
+        "status": "success",
+        "amount": str(amount),
+        "new_balance": str(wallet.amount),
+        "message": "Wallet funded successfully"
+    })
 
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                owner=user,
-                defaults={
-                    "amount": Decimal("0.00"),
-                },
-            )
-
-            if existing:
-                return Response(
-                    {
-                        "status": True,
-                        "message": "Payment already verified.",
-                        "amount": str(existing.amount),
-                        "new_balance": str(wallet.amount),
-                    }
-                )
-
-            wallet.amount += amount
-            wallet.save(update_fields=["amount"])
-
-            Transaction.objects.create(
-                user=user,
-                request_id=reference,
-                amount=amount,
-                status="success",
-                email=customer_email,
-            )
-
-            wallet.refresh_from_db()
-
-    except Exception as e:
-        return Response(
-            {
-                "status": False,
-                "message": str(e),
-            },
-            status=500,
-        )
-
-    return Response(
-        {
-            "status": True,
-            "message": "Wallet funded successfully.",
-            "amount": str(amount),
-            "new_balance": str(wallet.amount),
-        }
-    )
-
-
-@api_view(["GET"])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def wallet_balance(request):
 
     wallet, _ = Wallet.objects.get_or_create(
         owner=request.user,
-        defaults={
-            "amount": Decimal("0.00"),
-        },
+        defaults={"amount": Decimal("0.00")}
     )
 
-    return Response(
-        {
-            "status": True,
-            "username": request.user.username,
-            "balance": str(wallet.amount),
-        }
-    )
+    return Response({
+        "username": request.user.username,
+        "balance": str(wallet.amount)
+    })
+
+
 
 import uuid
 import time
