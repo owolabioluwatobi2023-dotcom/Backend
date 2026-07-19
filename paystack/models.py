@@ -166,26 +166,28 @@
 # WALLET
 # =========================
 
+from decimal import Decimal
+
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 
 
-# =========================
+# ==========================================
 # WALLET
-# =========================
+# ==========================================
 
 class Wallet(models.Model):
 
-    owner = models.OneToOneField(
-        User,
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="wallet"
     )
 
-    amount = models.DecimalField(
+    balance = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        default=0
+        default=Decimal("0.00")
     )
 
     created_at = models.DateTimeField(
@@ -196,13 +198,150 @@ class Wallet(models.Model):
         auto_now=True
     )
 
+
     def __str__(self):
-        return f"{self.owner.username} - ₦{self.amount}"
+        return f"{self.user.username} Wallet"
 
 
-# =========================
-# DATA VARIATIONS
-# =========================
+# ==========================================
+# PAYSTACK VIRTUAL ACCOUNT
+# ==========================================
+
+class VirtualAccount(models.Model):
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="virtual_account"
+    )
+
+    customer_code = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    account_number = models.CharField(
+        max_length=20,
+        unique=True
+    )
+
+    account_name = models.CharField(
+        max_length=200
+    )
+
+    bank_name = models.CharField(
+        max_length=100
+    )
+
+    account_reference = models.CharField(
+        max_length=100,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+
+    def __str__(self):
+        return f"{self.account_name} - {self.account_number}"
+
+
+
+# ==========================================
+# WALLET TRANSACTIONS
+# ==========================================
+
+class WalletTransaction(models.Model):
+
+    CREDIT = "credit"
+    DEBIT = "debit"
+
+
+    TYPE_CHOICES = [
+
+        (CREDIT, "Credit"),
+
+        (DEBIT, "Debit"),
+
+    ]
+
+
+    PENDING = "pending"
+    SUCCESS = "success"
+    FAILED = "failed"
+
+
+    STATUS_CHOICES = [
+
+        (PENDING, "Pending"),
+
+        (SUCCESS, "Success"),
+
+        (FAILED, "Failed"),
+
+    ]
+
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="wallet_transactions"
+    )
+
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+
+    transaction_type = models.CharField(
+        max_length=10,
+        choices=TYPE_CHOICES
+    )
+
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=PENDING
+    )
+
+
+    reference = models.CharField(
+        max_length=100,
+        unique=True
+    )
+
+
+    description = models.CharField(
+        max_length=255,
+        blank=True
+    )
+
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+
+    def __str__(self):
+
+        return (
+            f"{self.user.username} "
+            f"{self.transaction_type} "
+            f"₦{self.amount}"
+        )
+
+
+
+# ==========================================
+# DATA / AIRTIME VARIATIONS
+# ==========================================
 
 class VariationCode(models.Model):
 
@@ -210,47 +349,57 @@ class VariationCode(models.Model):
         max_length=100
     )
 
+
     variation_code = models.CharField(
         max_length=100,
         unique=True
     )
 
+
     name = models.CharField(
         max_length=255
     )
+
 
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2
     )
 
+
     fixed_price = models.BooleanField(
         default=True
     )
+
 
     active = models.BooleanField(
         default=True
     )
 
+
     created_at = models.DateTimeField(
         auto_now_add=True
     )
+
 
     updated_at = models.DateTimeField(
         auto_now=True
     )
 
+
     def __str__(self):
+
         return f"{self.service} - {self.name}"
 
 
-# =========================
-# TRANSACTION
-# =========================
+
+# ==========================================
+# VTU TRANSACTION
+# ==========================================
 
 class Transaction(models.Model):
 
-    STATUS_CHOICES = (
+    STATUS_CHOICES = [
 
         ("pending", "Pending"),
 
@@ -262,17 +411,15 @@ class Transaction(models.Model):
 
         ("reversed", "Reversed"),
 
-    )
+    ]
 
 
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="transactions"
     )
 
-
-    # Paystack reference
 
     reference = models.CharField(
         max_length=100,
@@ -281,8 +428,6 @@ class Transaction(models.Model):
         db_index=True
     )
 
-
-    # VTpass
 
     request_id = models.CharField(
         max_length=100,
@@ -300,8 +445,6 @@ class Transaction(models.Model):
     )
 
 
-    # Service
-
     service = models.CharField(
         max_length=100,
         blank=True,
@@ -309,16 +452,12 @@ class Transaction(models.Model):
     )
 
 
-    # Product
-
     product_name = models.CharField(
         max_length=255,
         blank=True,
         default=""
     )
 
-
-    # Link to variation
 
     variation = models.ForeignKey(
         VariationCode,
@@ -349,8 +488,6 @@ class Transaction(models.Model):
     )
 
 
-    # Amounts
-
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -379,8 +516,6 @@ class Transaction(models.Model):
     )
 
 
-    # Wallet snapshot
-
     initial_balance = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -394,8 +529,6 @@ class Transaction(models.Model):
         default=0
     )
 
-
-    # VTpass response
 
     response_code = models.CharField(
         max_length=20,
@@ -412,13 +545,6 @@ class Transaction(models.Model):
 
 
     purchased_code = models.TextField(
-        blank=True,
-        default=""
-    )
-
-
-    wallet_credit_id = models.CharField(
-        max_length=100,
         blank=True,
         default=""
     )
@@ -449,13 +575,4 @@ class Transaction(models.Model):
 
     def __str__(self):
 
-        if self.variation:
-            return f"{self.user.username} - {self.variation.name}"
-
         return f"{self.user.username} - {self.product_name}"
-
-
-
-
-
-

@@ -1,132 +1,131 @@
-from decimal import Decimal
-import requests
+# from decimal import Decimal
+# import requests
 
-from django.conf import settings
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
+# from django.conf import settings
+# from rest_framework.decorators import api_view, permission_classes
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework.response import Response
 
-from .models import Wallet, Transaction
+# from .models import Wallet, Transaction
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def verify_payment(request):
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def verify_payment(request):
 
-    reference = request.data.get("reference")
+#     reference = request.data.get("reference")
 
-    if not reference:
-        return Response(
-            {"error": "Reference required"},
-            status=400
-        )
+#     if not reference:
+#         return Response(
+#             {"error": "Reference required"},
+#             status=400
+#         )
 
-    # Already processed?
-    existing = Transaction.objects.filter(
-        reference=reference
-    ).first()
+#     # Already processed?
+#     existing = Transaction.objects.filter(
+#     request_id=reference
+# ).first()
+#     if existing:
+#         wallet, _ = Wallet.objects.get_or_create(
+#             owner=request.user,
+#             defaults={"amount": Decimal("0.00")}
+#         )
 
-    if existing:
-        wallet, _ = Wallet.objects.get_or_create(
-            owner=request.user,
-            defaults={"amount": Decimal("0.00")}
-        )
+#         return Response({
+#             "status": "success",
+#             "amount": str(existing.amount),
+#             "new_balance": str(wallet.amount),
+#             "message": "Already processed"
+#         })
 
-        return Response({
-            "status": "success",
-            "amount": str(existing.amount),
-            "new_balance": str(wallet.amount),
-            "message": "Already processed"
-        })
+#     url = f"https://api.paystack.co/transaction/verify/{reference}"
 
-    url = f"https://api.paystack.co/transaction/verify/{reference}"
+#     headers = {
+#         "Authorization":
+#         f"Bearer {settings.PAYSTACK_SECRET_KEY}"
+#     }
 
-    headers = {
-        "Authorization":
-        f"Bearer {settings.PAYSTACK_SECRET_KEY}"
-    }
+#     response = requests.get(
+#         url,
+#         headers=headers
+#     )
 
-    response = requests.get(
-        url,
-        headers=headers
-    )
+#     data = response.json()
 
-    data = response.json()
+#     print("PAYSTACK RESPONSE:", data)
 
-    print("PAYSTACK RESPONSE:", data)
+#     if not data.get("status"):
+#         return Response(
+#             {"error": "Verification failed"},
+#             status=400
+#         )
 
-    if not data.get("status"):
-        return Response(
-            {"error": "Verification failed"},
-            status=400
-        )
+#     payment = data["data"]
 
-    payment = data["data"]
+#     if payment["status"] != "success":
+#         return Response(
+#             {"error": "Payment not successful"},
+#             status=400
+#         )
 
-    if payment["status"] != "success":
-        return Response(
-            {"error": "Payment not successful"},
-            status=400
-        )
+#     amount = Decimal(
+#         str(payment["amount"])
+#     ) / Decimal("100")
 
-    amount = Decimal(
-        str(payment["amount"])
-    ) / Decimal("100")
+#     user = request.user
 
-    user = request.user
+#     print("USER ID:", user.id)
+#     print("USERNAME:", user.username)
 
-    print("USER ID:", user.id)
-    print("USERNAME:", user.username)
+#     wallet, created = Wallet.objects.get_or_create(
+#         owner=user,
+#         defaults={"amount": Decimal("0.00")}
+#     )
 
-    wallet, created = Wallet.objects.get_or_create(
-        owner=user,
-        defaults={"amount": Decimal("0.00")}
-    )
+#     print("WALLET ID:", wallet.id)
+#     print("OLD BALANCE:", wallet.amount)
 
-    print("WALLET ID:", wallet.id)
-    print("OLD BALANCE:", wallet.amount)
+#     wallet.amount += amount
+#     wallet.save(update_fields=["amount"])
 
-    wallet.amount += amount
-    wallet.save(update_fields=["amount"])
+#     wallet.refresh_from_db()
 
-    wallet.refresh_from_db()
+#     print("NEW BALANCE:", wallet.amount)
 
-    print("NEW BALANCE:", wallet.amount)
+#     # Transaction.objects.create(
+#     #     user=user,
+#     #     reference=reference,
+#     #     amount=amount,
+#     #     status="success",
+#     #     email=payment["customer"]["email"]
+#     # )
+#     Transaction.objects.create(
+#     user=user,
+#     request_id=reference,
+#     amount=amount,
+#     status="success",
+#     email=payment["customer"]["email"]
+# )
+#     return Response({
+#         "status": "success",
+#         "amount": str(amount),
+#         "new_balance": str(wallet.amount),
+#         "message": "Wallet funded successfully"
+#     })
 
-    # Transaction.objects.create(
-    #     user=user,
-    #     reference=reference,
-    #     amount=amount,
-    #     status="success",
-    #     email=payment["customer"]["email"]
-    # )
-    Transaction.objects.create(
-    user=user,
-    request_id=reference,
-    amount=amount,
-    status="success",
-    email=payment["customer"]["email"]
-)
-    return Response({
-        "status": "success",
-        "amount": str(amount),
-        "new_balance": str(wallet.amount),
-        "message": "Wallet funded successfully"
-    })
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def wallet_balance(request):
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def wallet_balance(request):
+#     wallet, _ = Wallet.objects.get_or_create(
+#         owner=request.user,
+#         defaults={"amount": Decimal("0.00")}
+#     )
 
-    wallet, _ = Wallet.objects.get_or_create(
-        owner=request.user,
-        defaults={"amount": Decimal("0.00")}
-    )
-
-    return Response({
-        "username": request.user.username,
-        "balance": str(wallet.amount)
-    })
+#     return Response({
+#         "username": request.user.username,
+#         "balance": str(wallet.amount)
+#     })
 
 
 
@@ -2169,3 +2168,180 @@ def vtpass_webhook(request):
 
 
 
+# paystack
+
+import json
+import requests
+from decimal import Decimal
+
+from django.conf import settings
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import Wallet, VirtualAccount
+
+
+# ==========================
+# CREATE VIRTUAL ACCOUNT
+# ==========================
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_virtual_account(request):
+
+    user = request.user
+
+    # Already created
+    account = VirtualAccount.objects.filter(user=user).first()
+
+    if account:
+        return Response({
+            "message": "Virtual account already exists",
+            "bank_name": account.bank_name,
+            "account_name": account.account_name,
+            "account_number": account.account_number,
+        })
+
+    headers = {
+        "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    # --------------------------
+    # Create Customer
+    # --------------------------
+
+    customer_response = requests.post(
+        "https://api.paystack.co/customer",
+        headers=headers,
+        json={
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+        },
+    ).json()
+
+    if not customer_response.get("status"):
+        return Response(
+            customer_response,
+            status=400
+        )
+
+    customer_code = customer_response["data"]["customer_code"]
+
+    # --------------------------
+    # Create Dedicated Account
+    # --------------------------
+
+    account_response = requests.post(
+        "https://api.paystack.co/dedicated_account",
+        headers=headers,
+        json={
+            "customer": customer_code,
+            "preferred_bank": "wema-bank",
+        },
+    ).json()
+
+    if not account_response.get("status"):
+        return Response(
+            account_response,
+            status=400
+        )
+
+    data = account_response["data"]
+
+    account = VirtualAccount.objects.create(
+        user=user,
+        customer_code=customer_code,
+        bank_name=data["bank"]["name"],
+        account_name=data["account_name"],
+        account_number=data["account_number"],
+    )
+
+    Wallet.objects.get_or_create(user=user)
+
+    return Response({
+        "message": "Virtual account created successfully",
+        "bank_name": account.bank_name,
+        "account_name": account.account_name,
+        "account_number": account.account_number,
+    })
+
+
+# ==========================
+# WALLET DETAILS
+# ==========================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def wallet(request):
+
+    wallet, _ = Wallet.objects.get_or_create(
+        user=request.user
+    )
+
+    account = VirtualAccount.objects.filter(
+        user=request.user
+    ).first()
+
+    return Response({
+        "balance": wallet.balance,
+        "bank_name": account.bank_name if account else None,
+        "account_name": account.account_name if account else None,
+        "account_number": account.account_number if account else None,
+    })
+
+
+# ==========================
+# PAYSTACK WEBHOOK
+# ==========================
+
+@csrf_exempt
+def paystack_webhook(request):
+
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    try:
+        payload = json.loads(request.body)
+
+        event = payload.get("event")
+
+        # Money received
+        if event == "charge.success":
+
+            data = payload["data"]
+
+            amount = Decimal(str(data["amount"])) / Decimal("100")
+
+            account_number = (
+                data.get("authorization", {})
+                .get("receiver_bank_account_number")
+            )
+
+            if account_number:
+
+                account = VirtualAccount.objects.filter(
+                    account_number=account_number
+                ).first()
+
+                if account:
+
+                    wallet, _ = Wallet.objects.get_or_create(
+                        user=account.user
+                    )
+
+                    wallet.balance += amount
+                    wallet.save()
+
+        return HttpResponse(status=200)
+
+    except Exception as e:
+
+        print(e)
+
+        return HttpResponse(status=400)

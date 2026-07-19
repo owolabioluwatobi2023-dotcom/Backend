@@ -12,154 +12,196 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
-from django.conf import settings
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
+from django.utils import timezone
+
 
 from notifications.services import (
     send_welcome_notification,
     send_login_notification,
 )
-@api_view(['POST'])
+
+
+# =====================================
+# REGISTER
+# =====================================
+
+@api_view(["POST"])
 def register_user(request):
 
-    username = request.data.get('username')
-    email = request.data.get('email')
-    first_name = request.data.get('first_name')
-    last_name = request.data.get('last_name')
-    password = request.data.get('password')
+    fullname = request.data.get("first_name")
+    phone = request.data.get("phone")
+    email = request.data.get("email")
+    password = request.data.get("password")
+    referral = request.data.get("referral", "")
 
-    if not username or not password:
+    if not fullname or not phone or not email or not password:
         return Response(
-            {"error": "Username and password required"},
-            status=400
+            {
+                "error": "Full name, phone, email and password are required."
+            },
+            status=400,
         )
 
-    if User.objects.filter(username=username).exists():
+    if User.objects.filter(username=phone).exists():
         return Response(
-            {"error": "Username exists"},
-            status=400
+            {
+                "error": "Phone number already exists."
+            },
+            status=400,
         )
 
+    if User.objects.filter(email=email).exists():
+        return Response(
+            {
+                "error": "Email already exists."
+            },
+            status=400,
+        )
+
+    names = fullname.strip().split(" ", 1)
+
+    first_name = names[0]
+    last_name = names[1] if len(names) > 1 else ""
 
     user = User.objects.create_user(
-        username=username,
+        username=phone,
         email=email,
         password=password,
         first_name=first_name,
-        last_name=last_name
+        last_name=last_name,
     )
-
 
     try:
         send_welcome_notification(user)
     except Exception as e:
-        print("Firebase notification error:", e)
-
+        print("WELCOME NOTIFICATION:", e)
 
     refresh = RefreshToken.for_user(user)
 
-    return Response({
-        "message": "User created successfully",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
+    return Response(
+        {
+            "message": "Account created successfully",
+
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+
+            "user": {
+                "id": user.id,
+                "phone": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "referral": referral,
+            },
         },
-        "token": str(refresh.access_token)
-    }, status=201)
+        status=201,
+    )
 
 
+# =====================================
+# LOGIN
+# Phone OR Email
+# =====================================
 
-
-
-
-
-from django.core.mail import send_mail
-from django.conf import settings
-from django.contrib.auth import authenticate
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-
-@api_view(['POST'])
+@api_view(["POST"])
 def login_user(request):
 
     username = request.data.get("username")
     password = request.data.get("password")
+    device = request.data.get("device", "Flutter Mobile")
 
-    user = authenticate(
-        username=username,
-        password=password
-    )
+    if not username or not password:
+        return Response(
+            {
+                "error": "Phone/Email and password are required."
+            },
+            status=400,
+        )
+
+    user = None
+
+    if "@" in username:
+
+        try:
+            user_obj = User.objects.get(email=username)
+
+            user = authenticate(
+                username=user_obj.username,
+                password=password,
+            )
+
+        except User.DoesNotExist:
+            pass
+
+    else:
+
+        user = authenticate(
+            username=username,
+            password=password,
+        )
 
     if user is None:
         return Response(
-            {"error": "Invalid credentials"},
-            status=400
+            {
+                "error": "Invalid phone/email or password."
+            },
+            status=400,
         )
 
-
-    device = request.data.get(
-        "device",
-        "Unknown Device"
-    )
-
-    ip = request.META.get(
-        "REMOTE_ADDR"
-    )
-
-    login_time = timezone.now()
-
-
-    # Send login notification safely
     try:
+
         send_login_notification(
             user=user,
             device=device,
-            ip=ip,
-            login_time=login_time
+            ip=request.META.get("REMOTE_ADDR"),
+            login_time=timezone.now(),
         )
 
     except Exception as e:
-        print("LOGIN NOTIFICATION ERROR:", e)
-
+        print("LOGIN NOTIFICATION:", e)
 
     refresh = RefreshToken.for_user(user)
 
+    return Response(
+        {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
 
-    return Response({
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
-        "user": {
+            "user": {
+                "id": user.id,
+                "phone": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            },
+        }
+    )
+
+
+# =====================================
+# PROFILE
+# =====================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+
+    user = request.user
+
+    fullname = f"{user.first_name} {user.last_name}".strip()
+
+    return Response(
+        {
             "id": user.id,
-            "username": user.username,
+            "phone": user.username,
+            "email": user.email,
+            "fullname": fullname,
             "first_name": user.first_name,
             "last_name": user.last_name,
         }
-    })
-# =========================
-# PROFILE
-# =========================
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_profile(request):
-    user = request.user
-
-    return Response({
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-    })
-
+    )
 
 # =========================
 # LOGOUT
@@ -272,54 +314,54 @@ def google_login(request):
     except Exception:
         return Response({"error": "Invalid Google token"}, status=400)
 
-# =========================
-# PAYSTACK INIT
-# =========================
-@api_view(['POST'])
-def initialize_payment(request):
-    email = request.data.get("email")
-    amount = request.data.get("amount")
+# # =========================
+# # PAYSTACK INIT
+# # =========================
+# @api_view(['POST'])
+# def initialize_payment(request):
+#     email = request.data.get("email")
+#     amount = request.data.get("amount")
 
-    if not email or not amount:
-        return Response({"error": "Email and amount required"}, status=400)
+#     if not email or not amount:
+#         return Response({"error": "Email and amount required"}, status=400)
 
-    try:
-        amount = int(amount) * 100
-    except:
-        return Response({"error": "Invalid amount"}, status=400)
+#     try:
+#         amount = int(amount) * 100
+#     except:
+#         return Response({"error": "Invalid amount"}, status=400)
 
-    url = "https://api.paystack.co/transaction/initialize"
+#     url = "https://api.paystack.co/transaction/initialize"
 
-    headers = {
-        "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
-        "Content-Type": "application/json",
-    }
+#     headers = {
+#         "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+#         "Content-Type": "application/json",
+#     }
 
-    payload = {
-        "email": email,
-        "amount": amount,
-    }
+#     payload = {
+#         "email": email,
+#         "amount": amount,
+#     }
 
-    response = requests.post(url, json=payload, headers=headers)
+#     response = requests.post(url, json=payload, headers=headers)
 
-    return Response(response.json(), status=response.status_code)
+#     return Response(response.json(), status=response.status_code)
 
 
-# =========================
-# PAYSTACK BALANCE
-# =========================
-import requests
-@api_view(['GET'])
-def paystack_balance(request):
-    url = "https://api.paystack.co/balance"
+# # =========================
+# # PAYSTACK BALANCE
+# # =========================
+# import requests
+# @api_view(['GET'])
+# def paystack_balance(request):
+#     url = "https://api.paystack.co/balance"
 
-    headers = {
-        "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"
-    }
+#     headers = {
+#         "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"
+#     }
 
-    response = requests.get(url, headers=headers)
+#     response = requests.get(url, headers=headers)
 
-    return Response(response.json(), status=response.status_code)
+#     return Response(response.json(), status=response.status_code)
 
 
 
@@ -722,9 +764,9 @@ def forgot_password(request):
 
         sent = send_mail(
 
-            subject="Mass Data Password Reset OTP",
+    subject="Mass Data Password Reset OTP",
 
-            message=f"""
+    message=f"""
 Hello {user.username},
 
 Your Mass Data password reset OTP is:
@@ -736,17 +778,14 @@ This OTP expires in 10 minutes.
 Do not share this code with anyone.
 """,
 
-            # Your Mass Data Gmail account
-            from_email="owolabioluwatobi2023@gmail.com",
+    from_email=settings.DEFAULT_FROM_EMAIL,
 
-            # User receives OTP here
-            recipient_list=[
-                user.email
-            ],
+    recipient_list=[
+        user.email
+    ],
 
-            fail_silently=False,
-        )
-
+    fail_silently=False,
+)
 
         print("EMAIL SENT:", sent)
 
@@ -935,3 +974,7 @@ def reset_password(request):
             "message": "Password reset successful"
         }
     )
+
+
+
+

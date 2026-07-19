@@ -2,8 +2,6 @@ from django.contrib import admin
 from .models import Wallet, Transaction
 
 
-
-
 # =========================
 # WALLET ADMIN
 # =========================
@@ -12,15 +10,15 @@ from .models import Wallet, Transaction
 class WalletAdmin(admin.ModelAdmin):
 
     list_display = (
-        "owner",
-        "amount",
+        "user",
+        "balance",
         "created_at",
         "updated_at",
     )
 
     search_fields = (
-        "owner__username",
-        "owner__email",
+        "user__username",
+        "user__email",
     )
 
     ordering = (
@@ -174,11 +172,6 @@ class TransactionAdmin(admin.ModelAdmin):
 
 
     show_variation.short_description = "Variation"
-
-
-
-
-
 
 
 
