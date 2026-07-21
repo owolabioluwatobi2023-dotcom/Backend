@@ -9,7 +9,11 @@ from .serializers import (
     LoginHistorySerializer,
 )
 
-# Save Firebase Device Token
+
+
+# ===================================
+# SAVE FIREBASE DEVICE TOKEN
+# ===================================
 
 class SaveDeviceTokenView(APIView):
 
@@ -17,11 +21,14 @@ class SaveDeviceTokenView(APIView):
         IsAuthenticated
     ]
 
+
     def post(self, request):
 
         token = request.data.get("token")
 
+
         if not token:
+
             return Response(
                 {
                     "error": "FCM token required"
@@ -44,12 +51,15 @@ class SaveDeviceTokenView(APIView):
                     ""
                 ),
 
+
                 "platform":
                 request.data.get(
                     "platform",
                     "android"
                 )
+
             }
+
         )
 
 
@@ -62,7 +72,12 @@ class SaveDeviceTokenView(APIView):
 
 
 
-# Get Notifications
+
+
+
+# ===================================
+# GET ALL USER NOTIFICATIONS
+# ===================================
 
 class NotificationListView(APIView):
 
@@ -91,13 +106,80 @@ class NotificationListView(APIView):
         )
 
 
+        unread = Notification.objects.filter(
+
+            user=request.user,
+
+            is_read=False
+
+        ).count()
+
+
+
         return Response(
-            serializer.data
+
+            {
+
+                "count": unread,
+
+                "notifications": serializer.data
+
+            }
+
         )
 
 
 
-# Login History
+
+
+
+
+# ===================================
+# MARK ALL READ
+# ===================================
+
+class MarkNotificationReadView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+
+    def post(self, request):
+
+        Notification.objects.filter(
+
+            user=request.user,
+
+            is_read=False
+
+        ).update(
+
+            is_read=True
+
+        )
+
+
+        return Response(
+
+            {
+
+                "message":
+                "All notifications marked as read"
+
+            }
+
+        )
+
+
+
+
+
+
+
+# ===================================
+# LOGIN HISTORY
+# ===================================
 
 class LoginHistoryView(APIView):
 
@@ -113,7 +195,9 @@ class LoginHistoryView(APIView):
             user=request.user
 
         ).order_by(
+
             "-login_time"
+
         )
 
 
@@ -127,5 +211,7 @@ class LoginHistoryView(APIView):
 
 
         return Response(
+
             serializer.data
+
         )

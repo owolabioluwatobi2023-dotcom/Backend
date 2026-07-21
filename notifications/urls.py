@@ -3,8 +3,10 @@ from django.urls import path
 from .views import (
     SaveDeviceTokenView,
     NotificationListView,
-    LoginHistoryView
+    LoginHistoryView,
+    MarkNotificationReadView,
 )
+
 
 urlpatterns = [
 
@@ -13,10 +15,18 @@ urlpatterns = [
         SaveDeviceTokenView.as_view()
     ),
 
+
     path(
         "list/",
         NotificationListView.as_view()
     ),
+
+
+    path(
+        "mark-read/",
+        MarkNotificationReadView.as_view()
+    ),
+
 
     path(
         "login-history/",

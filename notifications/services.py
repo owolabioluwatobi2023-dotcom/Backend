@@ -1,217 +1,32 @@
-# from .models import Notification
-# from .firebase import send_push_notification
-# import time
-# from django.contrib.auth.models import User
-
-
-
-# def create_notification(
-#     user,
-#     notification_type,
-#     title,
-#     message,
-# ):
-
-#     notification = Notification.objects.create(
-
-#         user=user,
-
-#         notification_type=notification_type,
-
-#         title=title,
-
-#         message=message
-#     )
-
-
-#     send_push_notification(
-
-#         user=user,
-
-#         title=title,
-
-#         body=message
-
-#     )
-
-
-#     return notification
-
-
-
-# def send_welcome_notification(user):
-
-#     return create_notification(
-
-#         user,
-
-#         "welcome",
-
-#         "🎉 Welcome to Mass Data",
-
-#         """
-# Thank you for choosing Mass Data.
-
-# We are delighted to have you as part of our community.
-
-# Enjoy fast and reliable Data, Airtime, Cable TV, Electricity and Wallet services.
-
-# Thank you for trusting Mass Data.
-# """
-
-#     )
-
-
-
-# def send_login_notification(
-#     user,
-#     device,
-#     ip,
-#     login_time
-# ):
-
-#     return create_notification(
-
-#         user,
-
-#         "login",
-
-#         "🔐 New Login Detected",
-
-#         f"""
-# A new login was detected on your account.
-
-# 📱 Device:
-# {device}
-
-# 🌍 IP Address:
-# {ip}
-
-# 🕒 Login Time:
-# {login_time}
-
-# If this wasn't you, please change your password immediately.
-# """
-
-#     )
-
-
-
-# def send_airtime_notification(
-#     user,
-#     network,
-#     phone,
-#     amount,
-#     transaction_id
-# ):
-
-#     return create_notification(
-
-#         user,
-
-#         "airtime",
-
-#         "📱 Airtime Purchase Successful",
-
-#         f"""
-# Your airtime purchase was completed successfully.
-
-# 📡 Network:
-# {network}
-
-# 📞 Phone Number:
-# {phone}
-
-# 💵 Amount:
-# ₦{amount}
-
-# 🆔 Transaction ID:
-# {transaction_id}
-
-# Thank you for choosing Mass Data.
-# """
-
-#     )
-
-
-
-# def send_data_notification(
-#     user,
-#     network,
-#     plan,
-#     phone,
-#     amount,
-#     transaction_id
-# ):
-
-#     return create_notification(
-
-#         user,
-
-#         "data",
-
-#         "📶 Data Purchase Successful",
-
-#         f"""
-# Congratulations!
-
-# Your data plan has been delivered successfully.
-
-# 📡 Network:
-# {network}
-
-# 📦 Plan:
-# {plan}
-
-# 📞 Phone Number:
-# {phone}
-
-# 💵 Amount:
-# ₦{amount}
-
-# 🆔 Transaction ID:
-# {transaction_id}
-
-# Enjoy your browsing.
-# """
-
-#     )
-
-
-
-
-
-# def send_notification_every_5_seconds():
-
-#     while True:
-
-#         users = User.objects.all()
-
-#         for user in users:
-
-#             create_notification(
-#                 user=user,
-#                 notification_type="welcome",
-#                 title="🎉 Mass Data Update",
-#                 message=f"""
-# Hello {user.username},
-
-# Thank you for using Mass Data.
-
-# Enjoy fast Airtime, Data, Cable TV,
-# Electricity and Wallet services.
-# """
-#             )
-
-#             print(
-#                 f"Notification sent to {user.username}"
-#             )
-#             time.sleep(300)
-#         # time.sleep(5)
-
-
 from .models import Notification, DeviceToken
 from .firebase import send_push_notification
+
+
+def get_user_name(user):
+    
+    print("NOTIFICATION USER:")
+    print("ID:", user.id)
+    print("FIRST NAME:", user.first_name)
+    print("LAST NAME:", user.last_name)
+    print("USERNAME:", user.username)
+
+
+    # Same format used during registration
+    first_name = (user.first_name or "").strip()
+    last_name = (user.last_name or "").strip()
+
+
+    fullname = f"{first_name} {last_name}".strip()
+
+
+    if fullname:
+        return fullname.title()
+
+
+    return "User"
+
+
+
 def create_notification(
     user,
     notification_type,
@@ -228,111 +43,71 @@ def create_notification(
         html_message=html_message,
     )
 
-    # Get the user's device
-    device = DeviceToken.objects.filter(user=user).first()
 
-    if device:
+    devices = DeviceToken.objects.filter(
+        user=user
+    )
+
+
+    for device in devices:
+
         try:
+
             send_push_notification(
                 token=device.token,
                 title=title,
                 body=message,
             )
-            print("✅ Push notification sent")
+
+            print("✅ Push sent")
+
         except Exception as e:
-            print("❌ Push notification error:", e)
-    else:
-        print("❌ No device token found for user:", user.username)
+
+            print("Push error:", e)
+
 
     return notification
 
+
+
+# ==============================
+# WELCOME
+# ==============================
+
 def send_welcome_notification(user):
 
+    name = get_user_name(user)
+
     return create_notification(
-
         user=user,
-
         notification_type="welcome",
-
         title="🎉 Welcome to Mass Data",
-
         message=f"""
-Hello {user.username},
+Hello {name} 👋
+
 
 Welcome to Mass Data.
 
-Enjoy Data, Airtime, Cable TV and Wallet services.
-""",
 
+You can now enjoy:
 
-        html_message=f"""
+📶 Data
 
-<div style="
-background:#0f172a;
-padding:20px;
-border-radius:15px;
-font-family:Arial;
-color:white;
-">
+📱 Airtime
 
+📺 Cable TV
 
-<h2 style="
-color:#22c55e;
-">
-🎉 Welcome to Mass Data
-</h2>
+⚡ Electricity
 
-
-<p>
-Hello <b>{user.username}</b> 👋
-</p>
-
-
-<p>
-Thank you for joining our platform.
-</p>
-
-
-<div style="
-background:#1e293b;
-padding:15px;
-border-radius:10px;
-">
-
-<h3>
-Available Services
-</h3>
-
-
-<p>📶 Fast Data Bundles</p>
-
-<p>📱 Airtime Recharge</p>
-
-<p>📺 Cable TV</p>
-
-<p>⚡ Electricity Payment</p>
-
-<p>💰 Wallet Services</p>
-
-
-</div>
-
-
-<p style="
-color:#94a3b8;
-">
-
-Thank you for trusting Mass Data ❤️
-
-</p>
-
-
-</div>
-
+💰 Wallet Services
 """
-
     )
 
+
+
+# ==============================
+# LOGIN
+# ==============================
 
 def send_login_notification(
     user,
@@ -341,39 +116,207 @@ def send_login_notification(
     login_time
 ):
 
+    name = get_user_name(user)
+
     return create_notification(
-
         user=user,
-
         notification_type="login",
-
         title="🔐 New Login Detected",
-
         message=f"""
+Hello {name} 👋
 
-Hello {user.username} 👋
 
-
-A new login was detected on your Mass Data account.
+A new login was detected.
 
 
 📱 Device:
 {device}
 
 
-🌍 IP Address:
+🌍 IP:
 {ip}
 
 
-🕒 Login Time:
+🕒 Time:
 {login_time}
+"""
+    )
 
 
-If this was not you, please change your password immediately.
+
+# ==============================
+# WALLET
+# ==============================
+
+def send_wallet_notification(
+    user,
+    amount
+):
+
+    name = get_user_name(user)
+
+    return create_notification(
+        user=user,
+        notification_type="wallet",
+        title="💰 Wallet Funded",
+        message=f"""
+Hello {name} 👋
+
+
+Your wallet has been credited.
+
+
+Amount:
+
+₦{amount}
 
 
 Thank you for using Mass Data ❤️
-
 """
+    )
 
+
+
+# ==============================
+# AIRTIME
+# ==============================
+
+def send_airtime_notification(
+    user,
+    network,
+    phone,
+    amount
+):
+
+    name = get_user_name(user)
+
+    return create_notification(
+        user=user,
+        notification_type="airtime",
+        title="📱 Airtime Purchase Successful",
+        message=f"""
+Hello {name} 👋
+
+
+Your airtime purchase was successful.
+
+
+Network:
+{network}
+
+
+Phone:
+{phone}
+
+
+Amount:
+₦{amount}
+"""
+    )
+
+
+
+# ==============================
+# DATA
+# ==============================
+
+def send_data_notification(
+    user,
+    network,
+    plan,
+    phone
+):
+
+    name = get_user_name(user)
+
+    return create_notification(
+        user=user,
+        notification_type="data",
+        title="📶 Data Purchase Successful",
+        message=f"""
+Hello {name} 👋
+
+
+Your data bundle was activated.
+
+
+Network:
+{network}
+
+
+Plan:
+{plan}
+
+
+Phone:
+{phone}
+"""
+    )
+
+
+
+# ==============================
+# CABLE TV
+# ==============================
+
+def send_cable_notification(
+    user,
+    provider,
+    smartcard
+):
+
+    name = get_user_name(user)
+
+    return create_notification(
+        user=user,
+        notification_type="cable",
+        title="📺 Cable Subscription Successful",
+        message=f"""
+Hello {name} 👋
+
+
+Your cable subscription is successful.
+
+
+Provider:
+{provider}
+
+
+Smart Card:
+{smartcard}
+"""
+    )
+
+
+
+# ==============================
+# ELECTRICITY
+# ==============================
+
+def send_electricity_notification(
+    user,
+    meter,
+    amount
+):
+
+    name = get_user_name(user)
+
+    return create_notification(
+        user=user,
+        notification_type="electricity",
+        title="⚡ Electricity Payment Successful",
+        message=f"""
+Hello {name} 👋
+
+
+Your electricity payment was successful.
+
+
+Meter:
+{meter}
+
+
+Amount:
+₦{amount}
+"""
     )
