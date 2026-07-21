@@ -1483,23 +1483,27 @@ def buy_product(request):
 
 
         with transaction.atomic():
-
-
-
             wallet, created = Wallet.objects.select_for_update().get_or_create(
 
-                owner=user,
+    user=user,
 
-                defaults={
-                    "amount":Decimal("0.00")
-                }
+    defaults={
+        "balance": Decimal("0.00")
+    }
 
-            )
+)
 
+            # wallet, created = Wallet.objects.select_for_update().get_or_create(
 
+            #     owner=user,
 
+            #     defaults={
+            #         "amount":Decimal("0.00")
+            #     }
 
-            if wallet.amount < amount:
+            # )
+            if wallet.balance < amount:
+            # if wallet.amount < amount:
 
                 return Response(
                     {
@@ -1960,19 +1964,15 @@ def buy_product(request):
                 )
 
             )
-
-
-
-
-
-            wallet.amount -= amount
+            wallet.balance -= amount
+            # wallet.amount -= amount
 
 
             wallet.save(
 
                 update_fields=[
 
-                    "amount"
+                   "balance"
 
                 ]
 
@@ -2005,8 +2005,8 @@ def buy_product(request):
                 "amount":str(amount),
 
                 "commission":str(commission),
-
-                "new_balance":str(wallet.amount)
+                "new_balance":str(wallet.balance)
+                # "new_balance":str(wallet.amount)
 
             })
 
